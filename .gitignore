@@ -1,0 +1,16 @@
+# Credenciales y archivos sensibles
+databricks/notebooks/Deploy_Token.py
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+
+# Archivos temporales Python
+__pycache__/
+*.pyc
+.venv/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

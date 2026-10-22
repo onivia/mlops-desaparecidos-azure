@@ -1,0 +1,7 @@
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+databricks-sdk>=0.60,<1
+mlflow>=3,<4
+scikit-learn>=1.5,<2
+pandas>=2,<3
+cloudpickle>=2,<4

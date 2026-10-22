@@ -1,0 +1,14 @@
+command: ["uvicorn", "app:app"]
+env:
+  - name: JOB_PADRE_ID
+    valueFrom: job
+  - name: JOB_HIJO_ID
+    valueFrom: job-2
+  - name: WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: TABLA_ENTRENAMIENTO
+    valueFrom: table
+  - name: TABLA_PROMOCION
+    valueFrom: table-2
+  - name: TABLA_MONITOREO
+    valueFrom: table-3
