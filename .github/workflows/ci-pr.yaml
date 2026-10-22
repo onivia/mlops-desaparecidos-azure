@@ -1,0 +1,29 @@
+name: Validar Pull Request MLOps
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'azure/frontend/**'
+      - 'tests/**'
+      - '.github/workflows/ci-pr.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validar-frontend:
+    name: Pruebas del frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener codigo del Pull Request
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validar HTML, JavaScript y contratos de las APIs
+        run: node --test tests/frontend.test.mjs
