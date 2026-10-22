@@ -1,0 +1,59 @@
+
+name: Desplegar Frontend MLOps en Azure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'azure/frontend/**'
+      - '.github/workflows/deploy-frontend.yaml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-mlops-ean
+  STORAGE_NAME: stdesap1792649942
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obtener codigo
+        uses: actions/checkout@v4
+
+      - name: Autenticar Azure mediante OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publicar HTML en Azure Storage
+        run: |
+          set -euo pipefail
+
+          STORAGE_KEY=$(az storage account keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --account-name "$STORAGE_NAME" \
+            --query '[0].value' -o tsv)
+
+          az storage blob upload \
+            --account-name "$STORAGE_NAME" \
+            --account-key "$STORAGE_KEY" \
+            --container-name '$web' \
+            --name index.html \
+            --file azure/frontend/index.html \
+            --overwrite true \
+            --content-type "text/html" \
+            --content-cache-control "no-cache" \
+            --output none
+
+      - name: Verificar publicacion
+        run: |
+          URL="https://$STORAGE_NAME.z22.web.core.windows.net/"
+          echo "Frontend publicado: $URL"
+          curl --fail-with-body --retry 5 --retry-delay 5 "$URL" -o /dev/null

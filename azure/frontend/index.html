@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f7fb">
+  <meta name="description" content="Modelo predictivo del estado de localización de personas desaparecidas en Colombia.">
+  <title>MLOps Studio · Modelo Predictivo de Localización</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f3f6fb; --surface: #ffffff; --surface2:#f7f9fd; --surface3:#eaf0f8;
+      --ink: #12233f; --muted: #62738d; --border:#dce5f1; --shadow:0 12px 32px rgba(28,52,91,.075);
+      --primary:#246ae9; --primary-dark:#174db2; --aqua:#008e89; --positive:#07846b;
+      --danger:#cb4757; --warn:#c57917; --pale-blue:#e9f0ff; --pale-aqua:#e8f8f5;
+      --track:#dce6f3; --glass:rgba(255,255,255,.85); --side:#0e1b32; --sideText:#ecf5ff;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg:#09111f; --surface:#111d30; --surface2:#14243a; --surface3:#1b2d48;
+      --ink:#eef4ff; --muted:#96a9c1; --border:#2b3d58; --shadow:0 15px 40px rgba(0,0,0,.19);
+      --primary:#6b9cff; --primary-dark:#477bdf; --aqua:#41c6ba; --positive:#41c6a4;
+      --danger:#ff8490; --warn:#f2b767; --pale-blue:#162e51; --pale-aqua:#103733;
+      --track:#2d3f5c; --glass:rgba(17,29,48,.88); --side:#050c18; --sideText:#f2f7ff;
+    }
+    *{box-sizing:border-box} html{min-width:320px;scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Segoe UI",Arial,sans-serif;line-height:1.48;transition:background .24s,color .24s}
+    button,input,select{font:inherit} button{cursor:pointer}
+    button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}
+    button:disabled{opacity:.55;cursor:not-allowed} a{color:inherit}
+    .shell{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100vh}
+    .side{background:var(--side);color:var(--sideText);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:26px 17px 20px;overflow:hidden}
+    .side:before{content:"";position:absolute;top:-130px;left:-100px;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(47,122,237,.26),transparent 70%);pointer-events:none}
+    .brand{display:flex;gap:12px;align-items:center;position:relative;margin:3px 8px 36px}
+    .brand-mark{width:42px;height:42px;border-radius:13px;background:linear-gradient(140deg,#4abfe7,#3d72ed 56%,#a06df4);display:grid;place-items:center;box-shadow:0 6px 22px #3c7cf054;font-size:24px;font-weight:800}
+    .brand-name{font-weight:800;font-size:16px;letter-spacing:-.5px}.brand-sub{font-size:10px;letter-spacing:2px;color:#a3bbda;font-weight:700}
+    .nav-title{font-size:10px;color:#879bb8;letter-spacing:2px;font-weight:800;padding-left:14px;margin-bottom:13px}
+    .nav{display:grid;gap:8px;position:relative}
+    .nav-button{display:flex;gap:13px;align-items:center;text-align:left;border:1px solid transparent;background:transparent;color:#adc0dc;padding:13px 15px;border-radius:13px;font-weight:700;width:100%;transition:.2s}
+    .nav-button:hover{background:#ffffff0d;color:white}.nav-button.active{background:linear-gradient(100deg,rgba(65,123,232,.30),rgba(36,113,196,.1));border-color:#6c9ffc48;color:white}
+    .nav-button svg{width:19px;height:19px;flex:none}
+    .side-flow{margin-top:40px;padding:16px 14px;border:1px solid #394862;border-radius:17px;background:#ffffff08;position:relative}
+    .side-flow .eyebrow{color:#9aaeca;font-size:10px;font-weight:800;letter-spacing:1.5px}
+    .flow-line{display:flex;gap:10px;align-items:center;padding:7px 0;color:#dce8f8;font-size:12px}
+    .flow-line + .flow-line{border-top:1px dashed #38485f}
+    .flow-dot{height:8px;width:8px;background:#4ed2c4;border-radius:100%;box-shadow:0 0 0 3px #41bca42b}
+    .side-bottom{margin-top:auto;position:relative;padding:14px 10px;border-top:1px solid #35445e}
+    .side-bottom strong{display:block;font-size:11px;letter-spacing:.7px;color:#eef4ff}
+    .side-bottom small{display:block;color:#90a4c0;font-size:11px;margin-top:6px;line-height:1.6}
+    main{min-width:0;padding:25px clamp(18px,2.4vw,45px) 50px;max-width:1800px;width:100%;margin:0 auto}
+    .topbar{display:flex;gap:18px;align-items:center;justify-content:space-between;margin-bottom:21px;min-width:0}
+    .crumb{color:var(--muted);font-size:12px;font-weight:700;display:flex;gap:9px;align-items:center;min-width:0}
+    .crumb strong{color:var(--ink);white-space:nowrap}.slash{color:var(--border)}
+    .tools{display:flex;align-items:center;gap:9px}
+    .tool{border:1px solid var(--border);background:var(--surface);color:var(--ink);height:38px;min-width:38px;padding:0 12px;border-radius:11px;font-size:13px;font-weight:700;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+    .tool svg{width:17px;height:17px;stroke:currentColor}.tool:hover{border-color:var(--primary)}
+    .health{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:11px;font-weight:800;color:var(--muted);min-width:114px;justify-content:center}
+    .light{width:8px;height:8px;border-radius:50%;background:#9badc5;box-shadow:0 0 0 3px #abb7c527}
+    .health.online .light{background:#29b99a;box-shadow:0 0 0 3px #29b99a2b}.health.offline .light{background:#e17670}
+    .hero{background:linear-gradient(112deg,#142850 0%,#203e77 43%,#175c86 100%);border-radius:22px;min-height:190px;padding:26px clamp(22px,2.3vw,38px);position:relative;overflow:hidden;color:white;display:flex;align-items:center;margin-bottom:20px;box-shadow:0 16px 35px #23518b23}
+    .hero:before{content:"";position:absolute;width:470px;height:470px;border:1px solid #89d6fc33;border-radius:50%;right:-88px;top:-185px;box-shadow:0 0 0 40px #94c6f20b,0 0 0 92px #8fcdf509}
+    .hero:after{content:"";position:absolute;right:10%;bottom:-98px;width:300px;height:220px;border:1px solid #8dc9ed4d;border-radius:50%;transform:rotate(-34deg)}
+    .hero-content{position:relative;z-index:1;max-width:740px}
+    .eyebrow{font-size:11px;letter-spacing:2.3px;text-transform:uppercase;font-weight:800}
+    .hero .eyebrow{color:#8fe7d8}.hero h1{margin:9px 0 8px;font-size:clamp(27px,2.3vw,38px);line-height:1.12;letter-spacing:-1.3px;font-weight:830}
+    .hero p{margin:0;color:#ccddf5;font-size:13px;max-width:650px}
+    .hero-network{position:absolute;right:32px;top:18px;width:265px;height:160px;opacity:.82;z-index:1}
+    .hero-network path{stroke:#8dd9ef;stroke-width:1.1;fill:none;stroke-dasharray:5 7;animation:dashes 20s linear infinite}
+    .hero-network circle{fill:#67d5d9;stroke:#defcff;stroke-width:2;animation:pulse 3s ease-in-out infinite alternate}
+    .hero-network circle:nth-of-type(2n){animation-delay:1s}
+    @keyframes dashes{to{stroke-dashoffset:-250}}@keyframes pulse{to{opacity:.4;transform:scale(.92)}}
+    .overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:19px}
+    .overview-tile{min-height:88px;display:flex;gap:13px;align-items:center;padding:17px 18px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
+    .tile-icon{width:45px;height:45px;border-radius:14px;display:grid;place-items:center;font-size:23px;flex:none;background:var(--pale-blue);color:var(--primary)}
+    .tile-icon.mint{background:var(--pale-aqua);color:var(--aqua)}
+    .tile-label{font-size:10px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:1px}.tile-value{font-size:14px;font-weight:800;line-height:1.4}
+    .section{display:none}.section.active{display:block;animation:appear .25s ease}
+    @keyframes appear{from{opacity:.55;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .section-head{display:flex;gap:13px;align-items:flex-end;justify-content:space-between;margin:26px 0 13px}
+    .section-head h2{font-size:21px;margin:0;letter-spacing:-.6px}.section-head p{font-size:12px;color:var(--muted);margin:4px 0 0}
+    .small-note{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:11px;font-weight:700;background:var(--surface2);border:1px solid var(--border);border-radius:99px;padding:7px 11px}
+    .work-grid{display:grid;grid-template-columns:minmax(325px,.88fr) minmax(0,1.5fr);gap:16px;align-items:start}
+    .panel{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);min-width:0;overflow:hidden}
+    .panel-head{display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px solid var(--border);padding:18px 19px}
+    .panel-head h3{font-size:14px;margin:0;font-weight:830}.panel-head p{font-size:11px;margin:3px 0 0;color:var(--muted)}
+    .panel-body{padding:19px}.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.3px;background:var(--surface3);color:var(--muted);border:1px solid var(--border)}
+    .pill.success{background:var(--pale-aqua);color:var(--positive);border-color:transparent}.pill.failed{color:var(--danger);background:color-mix(in srgb,var(--danger) 11%,var(--surface));border-color:transparent}.pill.wait{color:var(--warn);background:color-mix(in srgb,var(--warn) 11%,var(--surface));border-color:transparent}
+    .input-grid{display:grid;gap:14px}.field{min-width:0}.field label{display:flex;gap:7px;align-items:center;justify-content:space-between;font-weight:760;font-size:12px;margin-bottom:7px}.field small{color:var(--muted);font-size:10px;font-weight:500}
+    .field input,.field select{display:block;width:100%;height:43px;background:var(--surface2);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:0 12px;font-size:12px;outline:none;transition:.2s}
+    .field input:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 11%,transparent)}
+    .actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+    .btn{border:1px solid var(--border);border-radius:11px;min-height:42px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:820;background:var(--surface2);color:var(--ink);transition:.2s}
+    .btn:hover:not(:disabled){transform:translateY(-1px);border-color:var(--primary)}.btn.primary{border-color:transparent;background:linear-gradient(110deg,#266be9,#1f86c9);color:white;box-shadow:0 7px 15px #2c7ad522}
+    .btn.ghost{background:transparent}.btn.sm{min-height:32px;padding:6px 11px;font-size:11px}.btn svg{width:15px;height:15px}
+    .micro-tip{font-size:11px;color:var(--muted);margin:14px 0 0;line-height:1.6}
+    .separator{border:none;border-top:1px solid var(--border);margin:21px 0}
+    .read-row{display:flex;gap:8px;margin-top:9px}.read-row input{flex:1;min-width:0}
+    .result-empty{min-height:330px;display:grid;place-items:center;padding:28px;text-align:center;color:var(--muted)}
+    .empty-art{width:92px;height:92px;border-radius:25px;margin:0 auto 17px;background:radial-gradient(circle at 30% 30%,#9ebffc88,transparent 70%),var(--pale-blue);display:grid;place-items:center;font-size:36px;color:var(--primary)}
+    .result-empty strong{color:var(--ink);display:block;font-size:16px}.result-empty p{max-width:350px;font-size:12px;margin:8px auto 0}
+    .result-block{padding:18px 19px;border-bottom:1px solid var(--border)}.result-block:last-child{border-bottom:0}
+    .status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .meta-label{color:var(--muted);font-size:10px;font-weight:790;letter-spacing:1.1px;text-transform:uppercase}.meta-value{font-size:14px;font-weight:840;margin-top:5px;overflow-wrap:anywhere}
+    .metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:15px}
+    .metric{background:var(--surface2);border:1px solid var(--border);padding:12px 11px;border-radius:13px;min-width:0}
+    .metric b{display:block;font-size:18px;font-weight:850;letter-spacing:-.6px;overflow-wrap:anywhere}.metric small{display:block;color:var(--muted);font-weight:750;text-transform:uppercase;letter-spacing:.8px;font-size:9px;margin-top:4px}
+    .muted{color:var(--muted)}.subhead{font-weight:840;font-size:13px;margin:0 0 11px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .run-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:13px;margin:10px 0}
+    .run-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.run-top strong{font-size:12px}
+    .run-desc{font-size:11px;color:var(--muted);margin:6px 0}
+    .bars{display:grid;gap:9px;margin-top:12px}.bar-row{display:grid;grid-template-columns:92px minmax(0,1fr) 40px;gap:8px;align-items:center;font-size:10px;color:var(--muted);font-weight:700}
+    .bar-track{height:9px;background:var(--track);border-radius:20px;overflow:hidden}
+    .bar-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,#409ae8,#386ee5)}.bar-fill.teal{background:linear-gradient(90deg,#1bd7c3,#118f9f)}.bar-fill.orange{background:linear-gradient(90deg,#fcc878,#de9050)}
+    .tiny-metrics{font-size:11px;display:flex;gap:13px;flex-wrap:wrap;margin-top:11px;color:var(--muted)}.tiny-metrics strong{color:var(--ink)}
+    .tiny-info{font-size:11px;line-height:1.6;color:var(--muted)}
+    .metric-duo{display:grid;grid-template-columns:1fr 1fr;gap:10px}.inf-card{background:var(--surface2);border:1px solid var(--border);border-radius:15px;padding:16px}
+    .inf-card .value{font-size:27px;font-weight:890;letter-spacing:-1px;margin-top:4px}.inf-card .hint{font-size:11px;color:var(--muted)}
+    .donut-area{display:flex;align-items:center;justify-content:center;gap:25px;padding:12px 0 8px;flex-wrap:wrap}
+    .donut{--amount:0%;width:138px;height:138px;flex:none;border-radius:50%;background:conic-gradient(#39c7ba var(--amount),var(--track) var(--amount));display:grid;place-items:center;transition:background .4s}
+    .donut-hole{width:107px;height:107px;border-radius:50%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:var(--surface);border:1px solid var(--border)}
+    .donut-hole strong{font-size:25px;letter-spacing:-1px}.donut-hole small{font-size:10px;color:var(--muted)}
+    .donut-copy{max-width:190px;font-size:12px;color:var(--muted)}.donut-copy strong{display:block;color:var(--ink);font-size:14px;margin-bottom:5px}
+    .json-wrap{margin-top:16px;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow)}
+    .json-wrap summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;font-size:12px;font-weight:840;cursor:pointer}
+    .json-wrap summary::-webkit-details-marker{display:none}.json-wrap summary .left{display:flex;align-items:center;gap:10px}
+    .json-wrap[open] summary{border-bottom:1px solid var(--border)}
+    .json-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 15px;background:#0c1c32;color:#9db6d2;font-size:10px}
+    .json-toolbar .btn{border-color:#314969;background:#192b44;color:white}
+    pre.json{margin:0;padding:19px;background:#0b182b;color:#c8e6f9;font:11.5px/1.65 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;overflow:auto;max-height:420px;white-space:pre;tab-size:2}
+    .pred-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .pred-fields .field label{justify-content:flex-start}.field-index{color:var(--aqua);font-size:10px;font-weight:900;margin-right:3px}
+    .pred-fields .field input{height:42px}
+    .feedback{display:none;margin-top:14px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--muted);line-height:1.55}
+    .feedback.visible{display:block}.feedback.error{background:color-mix(in srgb,var(--danger) 9%,var(--surface));border-color:color-mix(in srgb,var(--danger) 30%,var(--border));color:var(--danger)}
+    .feedback.ok{background:var(--pale-aqua);border-color:color-mix(in srgb,var(--positive) 25%,var(--border));color:var(--positive)}
+    .errline{padding:9px 0;border-bottom:1px dashed var(--border);font-size:11px;color:var(--muted)}.errline:last-child{border:0}.errline strong{color:var(--ink)}
+    .copyright{padding:29px 0 5px;text-align:center;color:var(--muted);font-size:11px}
+    .spinner{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .75s linear infinite;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .sr-only{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0);white-space:nowrap;overflow:hidden}
+    @media(max-width:1220px){.shell{grid-template-columns:205px 1fr}.side{padding-left:10px;padding-right:10px}.hero-network{opacity:.3}.work-grid{grid-template-columns:1fr}.panel{width:100%}.pred-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:940px){.shell{display:block}.side{position:static;height:auto;padding:13px 16px;display:flex;flex-direction:row;gap:12px;align-items:center;justify-content:space-between}.brand{margin:0}.nav-title,.side-flow,.side-bottom{display:none}.nav{display:flex}.nav-button{padding:10px 13px;width:auto}.brand-sub{display:none}main{padding:21px 18px 35px}.hero{min-height:160px}.hero-network{display:none}.overview{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:650px){.brand-mark{width:36px;height:36px;font-size:20px}.brand-name{font-size:12px}.nav-button{font-size:0;padding:10px}.nav-button svg{width:20px;height:20px}.topbar{align-items:flex-start}.crumb{font-size:10px}.tool .tool-label{display:none}.tool{padding:0 9px}.health{display:none}.hero{padding:23px;min-height:156px}.hero h1{font-size:26px}.overview{grid-template-columns:1fr}.overview-tile{min-height:65px;padding:12px}.section-head{align-items:flex-start}.section-head .small-note{display:none}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pred-fields{grid-template-columns:1fr}.metric-duo{grid-template-columns:1fr}.bar-row{grid-template-columns:76px minmax(0,1fr) 39px}.read-row{flex-direction:column}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+    /* Vista compacta Archify: ambos paneles visibles, sin scroll de página en escritorio típico. */
+    .shell{grid-template-columns:218px minmax(0,1fr)}
+    .side{padding:19px 13px 16px}
+    .brand{margin:0 5px 27px}
+    .side-bottom{padding:14px 10px}
+    .side-bottom strong{font-size:11px;letter-spacing:0;line-height:1.55}
+    .side-bottom strong+strong{margin-top:7px}
+    .side-bottom small{font-size:11px;margin-top:10px}
+    main{padding:15px clamp(14px,1.7vw,30px) 30px;max-width:1940px}
+    .topbar{margin-bottom:12px}
+    .hero{min-height:124px;margin-bottom:13px;padding:19px clamp(20px,2.1vw,34px);border-radius:18px}
+    .hero-content{max-width:1040px}
+    .hero h1{font-size:clamp(23px,1.74vw,30px);letter-spacing:-.7px;line-height:1.16;margin:7px 0 7px}
+    .hero p{font-size:13px;font-weight:700;color:#b8def1}
+    .hero-network{width:215px;top:6px;right:17px;opacity:.28;pointer-events:none}
+    .section-head{margin:9px 0 10px;align-items:center}
+    .section-head h2{font-size:18px}
+    .work-grid{grid-template-columns:minmax(0,1.04fr) minmax(0,1.36fr);gap:12px;align-items:stretch}
+    .panel{border-radius:15px}
+    .panel-head{padding:11px 15px;min-height:56px}
+    .panel-body{padding:12px 15px}
+    .panel-head h3{font-size:13px}
+    .panel-head p{font-size:10px}
+    .pred-fields{gap:8px 10px}
+    .pred-fields .field label{margin-bottom:3px;font-size:10px}
+    .pred-fields .field select{height:35px;font-size:11px;padding:0 25px 0 9px}
+    .field select{appearance:auto}
+    .pred-fields .field select:invalid{color:var(--muted)}
+    .field-index{font-size:9px}
+    .actions{margin-top:12px;gap:7px}
+    .btn{min-height:37px;padding:8px 11px;font-size:11px}
+    .micro-tip.compact-tip{margin-top:8px;font-size:10px;line-height:1.37}
+    .input-grid{gap:9px}
+    .field label{margin-bottom:4px;font-size:11px}
+    .field input,.field select{height:37px;font-size:11px}
+    .separator{margin:12px 0}
+    .read-row{margin-top:4px}
+    .result-empty{min-height:400px;padding:20px}
+    .empty-art{height:68px;width:68px;font-size:28px;border-radius:22px;margin-bottom:12px}
+    #predict-results,#train-results{max-height:490px;overflow:auto;overscroll-behavior:contain}
+    .result-block{padding:13px 15px}
+    .metric-grid{margin-top:10px;gap:7px}
+    .metric{padding:9px 8px}
+    .metric b{font-size:15px}
+    .metric-duo .inf-card{padding:12px}
+    .donut-area{gap:15px;padding:10px 0 7px}
+    .donut{height:119px;width:119px}
+    .donut-hole{height:89px;width:89px}
+    .donut-hole strong{font-size:21px}
+    .json-wrap{margin-top:11px}
+    .json-wrap summary{padding:11px 15px}
+    .error-wrap{border-color:color-mix(in srgb,var(--warn) 23%,var(--border))}
+    .error-wrap summary .left{color:var(--warn)}
+    .error-wrap pre.json{background:color-mix(in srgb,var(--surface2) 93%,var(--warn));color:var(--ink);max-height:240px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .error-wrap .json-toolbar{background:var(--surface2);color:var(--muted);border-top:1px solid var(--border)}
+    .error-wrap .json-toolbar .btn{background:var(--surface);color:var(--ink);border-color:var(--border)}
+    .error-wrap.has-error{border-color:color-mix(in srgb,var(--danger) 49%,var(--border))}
+    .error-wrap.has-error summary .left{color:var(--danger)}
+    .feedback.visible{margin-top:8px;padding:8px 10px;font-size:11px}
+    .copyright{display:grid;justify-items:center;gap:3px;line-height:1.55;padding:21px 15px 4px}
+    .copyright strong{color:var(--ink);font-size:12px}
+    .copyright span{display:block}
+    @media(min-width:1250px) and (max-height:820px){
+      .hero{min-height:108px;padding-top:13px;padding-bottom:13px}
+      .hero h1{font-size:clamp(22px,1.65vw,27px)}
+      .topbar{margin-bottom:9px}
+      .panel-head{min-height:49px;padding-top:8px;padding-bottom:8px}
+      .panel-body{padding-top:10px;padding-bottom:10px}
+      .pred-fields{gap:6px 9px}
+      .pred-fields .field select{height:33px}
+      .result-empty{min-height:360px}
+      #predict-results,#train-results{max-height:430px}
+    }
+    @media(max-width:1240px){
+      .shell{grid-template-columns:190px minmax(0,1fr)}
+      .work-grid{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr)}
+      .pred-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .hero-network{opacity:.18}
+    }
+    @media(max-width:970px){
+      .shell{display:block}
+      .side{position:static;height:auto;padding:11px 15px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+      .brand{margin:0}.brand-sub{display:none}.nav-title,.side-bottom{display:none}
+      .nav{display:flex;gap:5px}.nav-button{padding:9px 12px;width:auto}
+      main{padding:14px 16px 30px}
+      .work-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+      .hero{min-height:110px}
+      .hero-network{display:none}
+      .pred-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(min-width:761px) and (max-width:970px){
+      .hero{min-height:92px;padding:12px 17px;margin-bottom:8px}
+      .hero h1{font-size:21px;margin:4px 0}
+      .hero p{font-size:11px}
+      .topbar{margin-bottom:7px}
+      .section-head{margin:6px 0 7px}
+      .panel-body{padding:9px 10px}
+      .panel-head{min-height:48px;padding:8px 10px}
+      .pred-fields{gap:6px 7px}
+      .pred-fields .field select{height:32px}
+      .micro-tip.compact-tip{font-size:9px;margin-top:5px}
+      .actions{margin-top:7px}
+      .result-empty{min-height:345px}
+    }
+    @media(max-width:760px){
+      .work-grid{grid-template-columns:1fr}
+      #predict-results,#train-results{max-height:none}
+      .result-empty{min-height:180px}
+      .hero h1{font-size:24px}
+      .hero{padding:18px 20px}
+      .small-note{display:none}
+    }
+    @media(max-width:520px){
+      .nav-button{padding:9px 10px}.nav-button span{font-size:0}
+      .nav-button svg{width:20px;height:20px}
+      .tools{gap:5px}.tool{padding:0 9px}
+      .pred-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .pred-fields .field select{font-size:10px}
+      .hero h1{font-size:21px}
+      .hero .eyebrow{letter-spacing:1px;font-size:9px}
+      .copyright{font-size:10px}
+    }
+
+    /* Modo presentación: ajustar formulario + resultado al primer pantallazo.
+       Los tres paneles JSON quedan después y pueden abrirse/contraerse. */
+    .request-wrap{border-color:color-mix(in srgb,var(--primary) 22%,var(--border))}
+    .request-wrap summary .left{color:var(--primary)}
+    .request-symbol{font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:800}
+    .request-wrap .json-toolbar{background:#122c47}
+    .request-wrap pre.json{max-height:300px}
+    .json-wrap + .json-wrap{margin-top:9px}
+    @media(min-width:1000px) and (max-height:900px){
+      main{padding-top:9px}
+      .topbar{margin-bottom:7px}
+      .hero{min-height:96px;margin-bottom:7px;padding-top:12px;padding-bottom:12px}
+      .hero .eyebrow{font-size:9px;letter-spacing:1.6px}
+      .hero h1{font-size:clamp(20px,1.6vw,27px);line-height:1.11;margin:4px 0}
+      .hero p{font-size:11px}
+      .section-head{margin:5px 0 7px}
+      .section-head h2{font-size:17px}
+      .panel-head{min-height:43px;padding:7px 12px}
+      .panel-head h3{font-size:12px}
+      .panel-head p{font-size:9px;margin-top:1px}
+      .panel-body{padding:8px 12px}
+      .pred-fields{gap:5px 9px}
+      .pred-fields .field label{font-size:9px;margin-bottom:2px;line-height:1.2}
+      .pred-fields .field select{height:29px;font-size:10.5px;padding-left:8px}
+      .actions{margin-top:7px;gap:6px}
+      .btn{min-height:31px;padding:5px 9px;font-size:10.5px}
+      .input-grid{gap:6px}
+      .field label{font-size:10px;margin-bottom:3px}
+      .field input,.field select{height:32px}
+      .separator{margin:9px 0}
+      .micro-tip{font-size:9px;line-height:1.3;margin:6px 0}
+      .result-empty{min-height:320px}
+      #predict-results,#train-results{max-height:430px}
+      .side{padding-top:14px}
+    }
+    @media(min-width:1000px) and (max-height:720px){
+      .hero{min-height:80px;padding-top:8px;padding-bottom:8px}
+      .hero h1{font-size:20px}
+      .hero-network{opacity:.12}
+      .pred-fields{gap:3px 7px}
+      .pred-fields .field select{height:27px}
+      .panel-head{min-height:38px}
+      .panel-body{padding:6px 10px}
+      .section-head{margin:4px 0 5px}
+      .result-empty{min-height:260px}
+    }
+    @media(max-width:970px){
+      /* En tablet/móvil prima la lectura; los paneles pueden apilarse. */
+      .pred-fields .field select{min-height:32px}
+      .result-empty{min-height:200px}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span><div><div class="brand-name">MLOps Studio</div><div class="brand-sub">PROYECTO · EAN 2026</div></div></div>
+      <div class="nav-title">MÓDULOS</div>
+      <nav class="nav" aria-label="Navegación principal">
+        <button class="nav-button active" id="nav-predict" data-screen="predict" aria-current="page" title="Predicción individual">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3"/></svg> <span>01 · Predicción</span>
+        </button>
+        <button class="nav-button" id="nav-train" data-screen="train" title="Entrenamiento y seguimiento">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 17 9 11l4 4 8-8"/><path d="M16 7h5v5"/></svg> <span>02 · Entrenamiento</span>
+        </button>
+      </nav>
+      <div class="side-bottom"><strong>Estudiante: Diego Vega</strong><strong>Estudiante: Oscar Nivia</strong><small>MLOps<br>Maestría en Ciencia de Datos<br>Universidad EAN · 2026</small></div>
+    </aside>
+    <main>
+      <div class="topbar">
+        <div class="crumb"><span>MLOps Studio</span><span class="slash">/</span><strong id="crumb-label">Predicción</strong></div>
+        <div class="tools">
+          <div class="health" id="health" title="Estado de la API de Azure"><span class="light"></span><span id="health-text">Verificando...</span></div>
+          <button class="tool" id="theme-toggle" type="button" aria-label="Activar modo oscuro" title="Cambiar modo claro / oscuro">
+            <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"/></svg><span class="tool-label" id="theme-label">Oscuro</span>
+          </button>
+          <button class="tool" id="fullscreen-toggle" type="button" aria-label="Activar pantalla completa" title="Pantalla completa">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 3H4a1 1 0 0 0-1 1v4m13-5h4a1 1 0 0 1 1 1v4M3 16v4a1 1 0 0 0 1 1h4m13-5v4a1 1 0 0 1-1 1h-4"/></svg><span class="tool-label" id="fullscreen-label">Pantalla completa</span>
+          </button>
+        </div>
+      </div>
+      <header class="hero">
+        <div class="hero-content"><div class="eyebrow">Machine learning · orquestación + inferencia</div><h1 id="hero-title">Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</h1><p id="hero-description">Basado en el Registro Histórico 1930–2026</p></div>
+        <svg class="hero-network" viewBox="0 0 280 175" aria-hidden="true"><path d="M25 124 100 48 164 99 254 25M25 124l139-25 70 53M100 48l134 104M164 99l90-74"/><circle cx="25" cy="124" r="8"/><circle cx="100" cy="48" r="7"/><circle cx="164" cy="99" r="9"/><circle cx="254" cy="25" r="7"/><circle cx="234" cy="152" r="7"/></svg>
+      </header>
+
+      <section class="section" id="screen-train" aria-labelledby="train-title">
+        <div class="section-head"><div><h2 id="train-title">02 · Entrenamiento MLOps</h2></div><span class="small-note">POST /api/entrenar · GET /api/entrenar/{run_id}</span></div>
+        <div class="work-grid">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Configurar ejecución</h3><p>Parámetros originales del pipeline</p></div><span class="pill">NB00 → NB06</span></div>
+            <div class="panel-body">
+              <form id="train-form" autocomplete="off">
+                <div class="input-grid">
+                  <div class="field"><label for="max_iteraciones">Máximo de iteraciones <small>entero positivo</small></label><input id="max_iteraciones" name="max_iteraciones" type="number" min="1" step="1" value="2" required></div>
+                  <div class="field"><label for="tamano_lote">Tamaño de lote <small>registros</small></label><input id="tamano_lote" name="tamano_lote" type="number" min="1" step="1" value="1000" required></div>
+                  <div class="field"><label for="reiniciar_modelos">Reiniciar modelos <small>booleano</small></label><select id="reiniciar_modelos" name="reiniciar_modelos"><option value="false">false · Conservar los modelos</option><option value="true">true · Reiniciar según pipeline</option></select></div>
+                </div>
+                <div class="actions"><button class="btn primary" id="train-start" type="submit">▶ &nbsp;Iniciar entrenamiento</button></div>
+                <p class="micro-tip">El POST inicia un Job real y genera una nueva ejecución. Se solicitará confirmación antes de enviarlo.</p>
+              </form>
+              <hr class="separator">
+              <form id="lookup-form"><div class="field"><label for="run-id">Consultar ejecución <small>ID del Job padre</small></label><div class="read-row"><input id="run-id" name="run-id" inputmode="numeric" pattern="[0-9]+" value="737177860368728" placeholder="Identificador run_id" required><button class="btn" type="submit" id="lookup-button">Consultar</button></div></div></form>
+              <div class="actions"><button type="button" class="btn ghost sm" id="demo-lookup">↗ Ver ejecución histórica validada</button><button type="button" class="btn ghost sm" id="poll-toggle" disabled>Activar seguimiento</button></div>
+              <p class="micro-tip" id="poll-message">Puedes consultar una ejecución anterior sin iniciar un nuevo entrenamiento.</p>
+              <div class="feedback" id="train-feedback" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Resultado del entrenamiento</h3><p>Estado, iteraciones, modelos y drift</p></div><span class="pill" id="train-result-pill">Sin consulta</span></div>
+            <div id="train-results"><div class="result-empty"><div><div class="empty-art">↗</div><strong>Panel listo para consultar</strong><p>Introduce un <code>run_id</code> histórico o inicia un entrenamiento. Aquí verás una interpretación visual del JSON real.</p></div></div></div>
+          </div>
+        </div>
+        <details class="json-wrap request-wrap" id="train-request-panel" open>
+          <summary><span class="left"><span class="request-symbol">{ }</span> &nbsp;JSON de entrada · entrenamiento</span><span class="muted">Ver / ocultar ▾</span></summary>
+          <div class="json-toolbar"><span id="train-request-label">JSON preparado para POST</span><button class="btn sm" type="button" data-copy-request="train">Copiar JSON</button></div>
+          <pre class="json" id="train-request" aria-live="polite">{}</pre>
+        </details>
+        <details class="json-wrap" id="train-json-panel"><summary><span class="left">{ } &nbsp;Respuesta JSON · entrenamiento</span><span class="muted">Ver / ocultar ▾</span></summary><div class="json-toolbar"><span id="train-json-label">Sin respuesta</span><button class="btn sm" type="button" data-copy="train">Copiar JSON</button></div><pre class="json" id="train-json">// Ejecuta o consulta una ejecución para ver el JSON.</pre></details>
+
+        <details class="json-wrap error-wrap" id="train-error-panel" open><summary><span class="left">⚠ &nbsp;Errores · entrenamiento</span><span class="muted" id="train-error-status">Sin errores</span></summary><div class="json-toolbar"><span id="train-error-label">Sin errores registrados</span><button class="btn sm" type="button" data-copy-error="train" disabled>Copiar error</button></div><pre class="json" id="train-error">Sin errores.</pre></details>
+      </section>
+
+      <section class="section active" id="screen-predict" aria-labelledby="predict-title">
+        <div class="section-head"><div><h2 id="predict-title">01 · Predicción individual</h2></div><span class="small-note">POST /api/predecir · Síncrono</span></div>
+        <div class="work-grid">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Variables del modelo</h3><p>Selecciona los valores; Databricks valida el catálogo del Champion</p></div><span class="pill">Modelo @champion</span></div>
+            <div class="panel-body">
+              <form id="predict-form" autocomplete="off">
+                <div class="pred-fields" id="pred-fields"></div>
+                <div class="actions"><button class="btn primary" id="predict-submit" type="submit">◎ &nbsp;Realizar predicción</button><button class="btn" id="load-sample" type="button">Usar ejemplo</button><button class="btn ghost" id="clear-predict" type="button">Limpiar</button></div>
+                <div class="feedback" id="predict-feedback" role="status" aria-live="polite"></div>
+              </form>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Resultado de la predicción</h3><p>Clasificación, probabilidad y modelo</p></div><span class="pill" id="predict-result-pill">Sin predicción</span></div>
+            <div id="predict-results"><div class="result-empty"><div><div class="empty-art">◈</div><strong>Motor de inferencia listo</strong><p>Completa las doce variables y pulsa <strong>Realizar predicción</strong> para mostrar el resultado del Champion.</p></div></div></div>
+          </div>
+        </div>
+        <details class="json-wrap request-wrap" id="predict-request-panel" open>
+          <summary><span class="left"><span class="request-symbol">{ }</span> &nbsp;JSON de entrada · predicción</span><span class="muted">Ver / ocultar ▾</span></summary>
+          <div class="json-toolbar"><span id="predict-request-label">JSON preparado para POST</span><button class="btn sm" type="button" data-copy-request="predict">Copiar JSON</button></div>
+          <pre class="json" id="predict-request" aria-live="polite">{}</pre>
+        </details>
+        <details class="json-wrap" id="predict-json-panel"><summary><span class="left">{ } &nbsp;Respuesta JSON · predicción</span><span class="muted">Ver / ocultar ▾</span></summary><div class="json-toolbar"><span id="predict-json-label">Sin respuesta</span><button class="btn sm" type="button" data-copy="predict">Copiar JSON</button></div><pre class="json" id="predict-json">// Realiza una predicción para ver la respuesta JSON.</pre></details>
+
+        <details class="json-wrap error-wrap" id="predict-error-panel" open><summary><span class="left">⚠ &nbsp;Errores · predicción</span><span class="muted" id="predict-error-status">Sin errores</span></summary><div class="json-toolbar"><span id="predict-error-label">Sin errores registrados</span><button class="btn sm" type="button" data-copy-error="predict" disabled>Copiar error</button></div><pre class="json" id="predict-error">Sin errores.</pre></details>
+      </section>
+      <footer class="copyright"><strong>Diego Vega - Oscar Nivia</strong><span>MLOps · Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</span><span>Universidad EAN · Azure + Databricks + GitHub</span><span>2026</span></footer>
+    </main>
+  </div>
+  <script>
+    'use strict';
+    // Origen público de FastAPI en Azure. No colocar aquí tokens, secretos ni contraseñas.
+    const API_BASE = 'https://api-mlops-desaparecidos.salmonsmoke-ef20a60f.westus.azurecontainerapps.io';
+    const HISTORICAL_RUN = '737177860368728';
+    const SAMPLE = Object.freeze({
+      Ciudad:'Bogotá D.C.', Localidad:'San Cristobal', Sexo:'Mujer',
+      RangoEdad:'(20 a 24)', Escolaridad:'Educación básica primaria',
+      EstadoCivil:'Soltero(a)', Etnia:'Sin Pertenencia Étnica',
+      PaisNacimiento:'Colombia', PertenenciaGrupal:'Ninguno',
+      RegistradoPor:'Instituto Nacional de Medicina Legal y Ciencias Forenses',
+      Mes:'enero', Dia:'lunes'
+    });
+    const FIELDS = [
+      ['Ciudad','Ciudad'],['Localidad','Localidad'],['Sexo','Sexo'],['RangoEdad','Rango de edad'],
+      ['Escolaridad','Escolaridad'],['EstadoCivil','Estado civil'],['Etnia','Etnia'],
+      ['PaisNacimiento','País de nacimiento'],['PertenenciaGrupal','Pertenencia grupal'],
+      ['RegistradoPor','Registrado por'],['Mes','Mes'],['Dia','Día']
+    ];
+    const el=id=>document.getElementById(id);
+    let trainData=null,predictData=null,pollTimer=null,polling=false,lastRun='';
+    const escapeHtml=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const n=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
+    const number=(v,places=2)=>n(v)===null?'—':v.toLocaleString('es-CO',{minimumFractionDigits:places,maximumFractionDigits:places});
+    const percent=v=>n(v)===null?'—':number(v*100,1)+' %';
+    const pill=(state)=>{let s=String(state||'PENDING');let cls=s==='SUCCEEDED'?'success':(s==='FAILED'||s==='ERROR'||s==='CANCELED'||s==='TIMEDOUT'?'failed':'wait');return `<span class="pill ${cls}">${escapeHtml(s)}</span>`};
+    const isTerminal=s=>['SUCCEEDED','FAILED','CANCELED','TIMEDOUT','SKIPPED','INTERNAL_ERROR'].includes(String(s||'').toUpperCase());
+    const trackPercent=x=>Math.min(100,Math.max(0,Number(x)||0));
+    const bar=(name,value,cls='')=>`<div class="bar-row"><span>${escapeHtml(name)}</span><div class="bar-track" role="meter" aria-label="${escapeHtml(name)}" aria-valuemin="0" aria-valuemax="1" aria-valuenow="${n(value)??0}"><div class="bar-fill ${cls}" style="width:${trackPercent((Number(value)||0)*100)}%"></div></div><strong>${percent(value)}</strong></div>`;
+    function feedback(id,msg,kind=''){let e=el(id);e.textContent=msg||'';e.className='feedback'+(msg?' visible':'')+(kind?' '+kind:'');}
+    const requestData={train:null,predict:null};
+    function setRequest(type,payload,label='JSON preparado para POST'){
+      requestData[type]=payload;
+      el(type+'-request').textContent=JSON.stringify(payload,null,2);
+      el(type+'-request-label').textContent=label;
+    }
+    function trainPayload(){return {
+      max_iteraciones:Number(el('max_iteraciones').value),
+      tamano_lote:Number(el('tamano_lote').value),
+      reiniciar_modelos:el('reiniciar_modelos').value==='true'
+    };}
+    function predictPayload(){return Object.fromEntries(FIELDS.map(([name])=>[name,el('input-'+name)?.value||'']));}
+    function updateRequestPreview(type){setRequest(type,type==='train'?trainPayload():predictPayload());}
+    async function copyJSON(value,button){
+      const content=JSON.stringify(value,null,2);
+      let copied=false;
+      if(navigator.clipboard?.writeText){try{await navigator.clipboard.writeText(content);copied=true;}catch{}}
+      if(!copied){const textarea=document.createElement('textarea');textarea.value=content;textarea.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(textarea);textarea.select();try{copied=document.execCommand('copy')}catch{}textarea.remove();}
+      if(copied){const old=button.textContent;button.textContent='✓ Copiado';setTimeout(()=>button.textContent=old,1700);}
+      else alert('No se pudo copiar automáticamente. Abre el JSON y cópialo manualmente.');
+    }
+    function setJSON(type,data,http){const txt=JSON.stringify(data,null,2);el(type+'-json').textContent=txt;el(type+'-json-label').textContent=`HTTP ${http||'—'} · ${new Date().toLocaleTimeString('es-CO')}`;if(type==='train')trainData=data;else predictData=data;}
+    async function api(path,opts={}){
+      let response;
+      try{response=await fetch(API_BASE+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})},cache:'no-store'});}catch(e){throw new Error('No fue posible conectar desde el navegador. Verifica que la API de Azure esté disponible y que CORS permita el dominio del HTML.');}
+      const body=await response.text();let data;
+      try{data=JSON.parse(body);}catch{throw new Error(`HTTP ${response.status}: respuesta no JSON del servicio (Databricks podría estar detenido).`)}
+      return {data,http:response.status,ok:response.ok};
+    }
+    const errorData={train:null,predict:null};
+    function setError(type,value=null,http=null){
+      const container=el(type+'-error-panel');
+      const status=el(type+'-error-status');
+      const btn=document.querySelector(`[data-copy-error="${type}"]`);
+      if(value==null){
+        errorData[type]=null;container.classList.remove('has-error');status.textContent='Sin errores';
+        el(type+'-error').textContent='Sin errores.';el(type+'-error-label').textContent='Sin errores registrados';btn.disabled=true;
+        return;
+      }
+      const structured=(typeof value==='string')?{tipo:'ERROR_CONEXION',mensaje:value}:(value?.error?value.error:value);
+      errorData[type]=structured;
+      container.classList.add('has-error');container.open=true;
+      status.textContent='Error detectado';
+      el(type+'-error').textContent=JSON.stringify(structured,null,2);
+      el(type+'-error-label').textContent=`${http?'HTTP '+http+' · ':''}${structured.tipo||'Detalle del error'}`;
+      btn.disabled=false;
+    }
+    function errorMessage(data,http){const e=data?.error;return e?.mensaje || (typeof data?.detail==='string'?data.detail:`La API devolvió HTTP ${http}.`);}
+    function setScreen(which){
+      const train=which==='train';el('screen-train').classList.toggle('active',train);el('screen-predict').classList.toggle('active',!train);
+      for(const b of document.querySelectorAll('.nav-button')){const active=b.dataset.screen===which;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')}
+      el('crumb-label').textContent=train?'Entrenamiento':'Predicción';
+      el('hero-title').textContent=train?'Entrenamiento y monitoreo del modelo predictivo':'Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia';
+      el('hero-description').textContent=train?'Orquestación de Jobs · evaluación de Champion y Challenger · monitoreo de drift':'Basado en el Registro Histórico 1930–2026';
+      history.replaceState(null,'',train?'#entrenamiento':'#prediccion');
+    }
+    document.querySelectorAll('.nav-button').forEach(b=>b.addEventListener('click',()=>setScreen(b.dataset.screen)));
+    function setTheme(dark){document.documentElement.dataset.theme=dark?'dark':'light';el('theme-label').textContent=dark?'Claro':'Oscuro';el('theme-toggle').title=dark?'Cambiar a modo claro':'Cambiar a modo oscuro';el('theme-toggle').setAttribute('aria-label',el('theme-toggle').title);try{localStorage.setItem('mlops_theme',dark?'dark':'light')}catch{}}
+    try{setTheme(localStorage.getItem('mlops_theme')==='dark')}catch{setTheme(false)}
+    el('theme-toggle').addEventListener('click',()=>setTheme(document.documentElement.dataset.theme!=='dark'));
+    function updateFullscreen(){let active=Boolean(document.fullscreenElement);el('fullscreen-label').textContent=active?'Salir de pantalla completa':'Pantalla completa';el('fullscreen-toggle').title=el('fullscreen-label').textContent;}
+    el('fullscreen-toggle').addEventListener('click',async()=>{try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen()}else{await document.exitFullscreen()}}catch{alert('Este navegador no permite activar la pantalla completa en este contexto.')}});
+    document.addEventListener('fullscreenchange',updateFullscreen);
+    async function health(){try{const r=await api('/health');let ok=r.ok&&r.data?.estado==='OK';el('health').className='health '+(ok?'online':'offline');el('health-text').textContent=ok?'Azure operativo':'API no disponible';}catch{el('health').className='health offline';el('health-text').textContent='Sin conexión';}}
+    health();
+    function stopPolling(label){if(pollTimer)clearTimeout(pollTimer);pollTimer=null;polling=false;el('poll-toggle').textContent='Activar seguimiento';if(label)el('poll-message').textContent=label;}
+    function startPolling(){if(!lastRun)return;stopPolling();polling=true;el('poll-toggle').textContent='Detener seguimiento';el('poll-message').textContent='Seguimiento automático activo: consulta cada 20 segundos.';pollTimer=setTimeout(async()=>{await lookup(lastRun,true);},20000)}
+    function renderTraining(d){
+      const runs=Array.isArray(d.iteraciones)?d.iteraciones:[];
+      const last=runs.filter(x=>x?.decision?.champion_final?.version!=null).at(-1);
+      const champion=last?.decision?.champion_final;
+      const done=n(d.iteraciones_completadas)??0,total=n(d.total_iteraciones)??0;
+      el('train-result-pill').outerHTML;el('train-result-pill').className='pill '+(d.estado==='SUCCEEDED'?'success':d.estado==='FAILED'?'failed':'wait');el('train-result-pill').textContent=d.estado||'PENDING';
+      const runItems=runs.map((r,i)=>{
+        const ch=r.challenger??{},prev=r.champion_anterior??{},dec=r.decision??{},dr=r.drift??{};
+        const lines=[bar('AUC Challenger',ch.metricas?.auc_roc),bar('AUC Champion',prev.metricas?.auc_roc,'teal')].join('');
+        let psiEntries=dr.psi_variables&&typeof dr.psi_variables==='object'?Object.entries(dr.psi_variables).filter(x=>n(x[1])!==null).sort((a,b)=>b[1]-a[1]).slice(0,5):[];
+        let max=Math.max(...psiEntries.map(x=>x[1]),.001);
+        return `<div class="run-card"><div class="run-top"><strong>Iteración ${escapeHtml(r.iteracion??i+1)} · ${escapeHtml(ch.algoritmo||'Sin Challenger')} v${escapeHtml(ch.version??'—')}</strong>${pill(r.estado)}</div>
+          <div class="run-desc">${escapeHtml(r.duracion||'Tiempo pendiente')} · Registros: ${escapeHtml(r.registros_procesados??'—')} · Champion anterior v${escapeHtml(prev.version??'—')}</div>
+          <div class="bars">${lines}</div>
+          <div class="tiny-metrics"><span>F1 Challenger <strong>${percent(ch.metricas?.f1)}</strong></span><span>F1 Champion <strong>${percent(prev.metricas?.f1)}</strong></span><span>Promoción <strong>${dec.promovido===true?'Sí':dec.promovido===false?'No':'—'}</strong></span></div>
+          <p class="tiny-info" style="margin:10px 0 0"><strong style="color:var(--ink)">Decisión:</strong> ${escapeHtml(dec.motivo||'Todavía sin decisión.')}</p>
+          <div class="tiny-metrics"><span>Drift: ${pill(dr.estado||'PENDIENTE')}</span>${dr.psi_puntaje!=null?`<span>PSI puntaje: <strong>${number(dr.psi_puntaje,4)}</strong></span>`:''}${dr.ks_p_value!=null?`<span>KS p-value: <strong>${Number(dr.ks_p_value).toExponential(2)}</strong></span>`:''}</div>
+          ${psiEntries.length?`<details style="margin-top:10px"><summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--aqua)">Variables con mayor PSI ▾</summary><div class="bars">${psiEntries.map(([key,val])=>`<div class="bar-row"><span title="${escapeHtml(key)}">${escapeHtml(key)}</span><div class="bar-track"><div class="bar-fill orange" style="width:${trackPercent(val/max*100)}%"></div></div><strong>${number(val,3)}</strong></div>`).join('')}</div></details>`:''}
+        </div>`;
+      }).join('');
+      const failures=d.error?`<div class="feedback visible error" style="margin:12px 0">${escapeHtml(typeof d.error==='string'?d.error:JSON.stringify(d.error))}</div>`:'';
+      const summary=`<div class="result-block"><div class="status-row"><div><div class="meta-label">Ejecución · run_id</div><div class="meta-value">${escapeHtml(d.run_id||'—')}</div></div>${pill(d.estado)}</div>
+        <div class="metric-grid"><div class="metric"><b>${done}/${total||'—'}</b><small>Iteraciones</small></div><div class="metric"><b>${escapeHtml(d.duracion||'—')}</b><small>Duración</small></div><div class="metric"><b>v${escapeHtml(champion?.version??'—')}</b><small>Champion final</small></div><div class="metric"><b>${escapeHtml(runs.at(-1)?.registros_procesados??'—')}</b><small>Registros últ. iter.</small></div></div>
+        <p class="tiny-info" style="margin:12px 0 0">Inicio: ${escapeHtml(d.fecha_inicio||'Pendiente')} &nbsp; · &nbsp; Fin: ${escapeHtml(d.fecha_fin||'Pendiente')}</p>${failures}</div>`;
+      el('train-results').innerHTML=summary+`<div class="result-block"><h4 class="subhead">Detalle por iteración <span class="muted" style="font-weight:600;font-size:10px">AUC y selección del modelo</span></h4>${runItems||'<p class="tiny-info">El Job está pendiente o todavía no reporta iteraciones.</p>'}</div>`;
+    }
+    async function lookup(run,auto=false){
+      run=String(run||'').trim();if(!/^\d+$/.test(run)){feedback('train-feedback','El run_id debe contener únicamente dígitos.','error');setError('train',{tipo:'ENTRADA_INVALIDA',mensaje:'run_id debe contener únicamente dígitos.'});return;}
+      setError('train');lastRun=run;el('run-id').value=run;el('poll-toggle').disabled=false;
+      el('lookup-button').disabled=true;feedback('train-feedback',auto?'Actualizando progreso del Job…':'Consultando resultados en Databricks…');
+      try{
+        const r=await api('/api/entrenar/'+encodeURIComponent(run));setJSON('train',r.data,r.http);
+        if(!r.ok){setError('train',r.data,r.http);feedback('train-feedback',errorMessage(r.data,r.http),'error');el('train-result-pill').textContent=`HTTP ${r.http}`;if(auto)stopPolling('Se detuvo el seguimiento por error HTTP.');return;}
+        renderTraining(r.data);if(r.data?.error)setError('train',r.data);feedback('train-feedback',`Consulta correcta · ${r.data.estado||'estado no informado'}`,'ok');
+        if(isTerminal(r.data.estado)){stopPolling('Ejecución finalizada. Puedes volver a consultar sus resultados.')}else if(polling){pollTimer=setTimeout(()=>lookup(lastRun,true),20000)}
+      }catch(e){setError('train',e.message);feedback('train-feedback',e.message,'error');if(auto)stopPolling('No se pudo continuar el seguimiento automático.');}
+      finally{el('lookup-button').disabled=false}
+    }
+    el('lookup-form').addEventListener('submit',e=>{e.preventDefault();stopPolling();lookup(el('run-id').value)});
+    el('demo-lookup').addEventListener('click',()=>{stopPolling();lookup(HISTORICAL_RUN)});
+    el('poll-toggle').addEventListener('click',()=>{if(polling){stopPolling('Seguimiento automático detenido manualmente.')}else{if(!lastRun){feedback('train-feedback','Primero consulta o inicia una ejecución.','error');return}startPolling()}});
+    el('train-form').addEventListener('input',()=>updateRequestPreview('train'));
+    el('train-form').addEventListener('change',()=>updateRequestPreview('train'));
+    updateRequestPreview('train');
+    el('train-form').addEventListener('submit',async e=>{
+      e.preventDefault();if(!e.currentTarget.reportValidity())return;
+      const payload=trainPayload();
+      if(!Number.isSafeInteger(payload.max_iteraciones)||!Number.isSafeInteger(payload.tamano_lote)||payload.max_iteraciones<1||payload.tamano_lote<1){setError('train',{tipo:'ENTRADA_INVALIDA',mensaje:'Los parámetros numéricos deben ser enteros positivos.'});feedback('train-feedback','Los parámetros numéricos deben ser enteros positivos.','error');return}
+      if(!confirm(`Se iniciará un entrenamiento real en Databricks.\n\nIteraciones: ${payload.max_iteraciones}\nLote: ${payload.tamano_lote}\nReiniciar modelos: ${payload.reiniciar_modelos}\n\n¿Confirmas iniciar el Job?`))return;
+      setRequest('train',payload,'POST /api/entrenar · JSON enviado');
+      setError('train');const btn=el('train-start');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Enviando…';stopPolling();feedback('train-feedback','Solicitando un nuevo Job a Databricks…');
+      try{
+        const r=await api('/api/entrenar',{method:'POST',body:JSON.stringify(payload)});setJSON('train',r.data,r.http);
+        if(!r.ok){setError('train',r.data,r.http);feedback('train-feedback',errorMessage(r.data,r.http),'error');el('train-result-pill').textContent=`HTTP ${r.http}`;return}
+        const id=String(r.data?.run_id||'');if(!/^\d+$/.test(id)){setError('train',{tipo:'RESPUESTA_INVALIDA',mensaje:'El POST no devolvió un run_id válido.'});feedback('train-feedback','El POST respondió, pero no entregó un run_id válido.','error');return}
+        lastRun=id;el('run-id').value=id;el('poll-toggle').disabled=false;
+        el('train-results').innerHTML=`<div class="result-empty"><div><div class="empty-art">✓</div><strong>Entrenamiento solicitado</strong><p>Se recibió el run_id <strong>${escapeHtml(id)}</strong>. El Job se ejecuta de forma asíncrona. Consultando el resultado…</p></div></div>`;
+        el('train-result-pill').className='pill wait';el('train-result-pill').textContent=r.data?.estado||'PENDING';
+        feedback('train-feedback','Entrenamiento iniciado correctamente. Seguimiento cada 20 segundos.','ok');
+        await lookup(id);if(!isTerminal(trainData?.estado))startPolling();
+      }catch(e){setError('train',e.message);feedback('train-feedback',e.message,'error')}finally{btn.disabled=false;btn.textContent='▶  Iniciar entrenamiento'}
+    });
+    // Opciones orientativas, NO extraídas directamente de OneHotEncoder.categories_.
+    // Sólo SAMPLE es un conjunto completamente validado contra Champion v6.
+    // La API valida estrictamente los valores; ante un 422 usa el catálogo devuelto por el modelo.
+    const OPTIONS = {
+      Ciudad:['Bogotá D.C.','Cali','Medellín','Pereira','Barranquilla'],
+      Localidad:['San Cristobal','Usaquen','Chapinero','Santa Fe','Usme','Tunjuelito','Bosa','Kennedy','Fontibon','Engativa','Suba','Barrios Unidos','Teusaquillo','Los Martires','Antonio Nariño','Puente Aranda','La Candelaria','Rafael Uribe Uribe','Ciudad Bolivar','Sumapaz','Sin información'],
+      Sexo:['Mujer','Hombre','Sin información'],
+      RangoEdad:['(0 a 4)','(5 a 9)','(10 a 14)','(15 a 17)','(18 a 19)','(20 a 24)','(25 a 29)','(30 a 34)','(35 a 39)','(40 a 44)','(45 a 49)','(50 a 54)','(55 a 59)','(60 a 64)','(65 a 69)','(70 a 74)','(75 a 79)','(80 y más)','Sin información'],
+      Escolaridad:['Educación básica primaria','Educación básica secundaria','Educación media','Educación superior','Educación preescolar','Técnica profesional','Tecnológica','Profesional','Posgrado','Ninguno','Sin información'],
+      EstadoCivil:['Soltero(a)','Casado(a)','Unión libre','Separado(a)','Divorciado(a)','Viudo(a)','Sin información'],
+      Etnia:['Sin Pertenencia Étnica','Indígena','Afrodescendiente','Afrocolombiano','Negro(a)','Raizal','Palenquero','Rrom','Sin información'],
+      PaisNacimiento:['Colombia','Venezuela','Ecuador','Perú','Brasil','Panamá','México','Estados Unidos','España','Chile','Argentina','Sin información'],
+      PertenenciaGrupal:['Ninguno','Desplazado','Discapacidad','Habitante de calle','LGBTI','Víctima','Desmovilizado','Reinsertado','Sin información'],
+      RegistradoPor:['Instituto Nacional de Medicina Legal y Ciencias Forenses','Fiscalía General de la Nación','Policía Nacional','Personería','Defensoría del Pueblo','Procuraduría General de la Nación','Sin información'],
+      Mes:['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'],
+      Dia:['lunes','martes','miércoles','jueves','viernes','sábado','domingo']
+    };
+    const approvedOptions={};
+    function renderOptions(key,values,preserve){
+      const sel=el('input-'+key); const current=preserve===undefined?sel?.value:preserve;
+      if(!sel)return;
+      let unique=[...new Set([SAMPLE[key],...values].filter(Boolean))];
+      sel.innerHTML='<option value="" disabled>Seleccionar…</option>'+unique.map(value=>`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('');
+      sel.value=unique.includes(current)?current:(unique.includes(SAMPLE[key])?SAMPLE[key]:'');
+    }
+    el('pred-fields').innerHTML=FIELDS.map(([key,label],index)=>`<div class="field"><label for="input-${key}"><span><span class="field-index">${String(index+1).padStart(2,'0')}</span> ${escapeHtml(label)}</span></label>
+      <select id="input-${key}" name="${key}" required aria-label="${escapeHtml(label)}"></select></div>`).join('');
+    FIELDS.forEach(([key])=>renderOptions(key,OPTIONS[key]||[],SAMPLE[key]));
+    el('pred-fields').addEventListener('change',()=>updateRequestPreview('predict'));
+    updateRequestPreview('predict');
+    function learnModelOptions(data){
+      const details=data?.error?.detalles;
+      if(!Array.isArray(details))return;
+      for(const info of details){
+        const key=info.campo; const allowed=info.valores_permitidos;
+        if(!OPTIONS[key]||!Array.isArray(allowed)||!allowed.length)continue;
+        // Backend proporciona hasta 25 categorías por campo incorrecto, no el catálogo total.
+        approvedOptions[key]=[...new Set([...(approvedOptions[key]||[]),...allowed.map(String)])];
+        renderOptions(key,[...approvedOptions[key],...(OPTIONS[key]||[])],info.sugerencia||el('input-'+key).value);
+      }
+    }
+    function fillPredict(values){FIELDS.forEach(([name])=>{const sel=el('input-'+name);sel.value=values[name]??'';});updateRequestPreview('predict');}
+    el('load-sample').addEventListener('click',()=>{fillPredict(SAMPLE);feedback('predict-feedback','Ejemplo validado cargado. Puedes seleccionar otras categorías.','ok')});
+    el('clear-predict').addEventListener('click',()=>{fillPredict({});feedback('predict-feedback','Selecciona las 12 variables para realizar la predicción.')});
+    function renderPrediction(d){
+      const ok=d.estado==='SUCCEEDED';el('predict-result-pill').className='pill '+(ok?'success':'failed');el('predict-result-pill').textContent=d.estado||'FAILED';
+      if(!ok){const err=d.error??{};const lines=Array.isArray(err.detalles)?err.detalles.map(x=>`<div class="errline"><strong>${escapeHtml(x.campo||'Campo')}</strong> · ${escapeHtml(x.mensaje||err.mensaje||'Valor incorrecto')}${x.sugerencia?`<br>Sugerencia: <strong>${escapeHtml(x.sugerencia)}</strong>`:''}${Array.isArray(x.valores_permitidos)&&x.valores_permitidos.length?`<br>Algunos valores permitidos: ${escapeHtml(x.valores_permitidos.slice(0,8).join(', '))}`:''}</div>`).join(''):'';
+        el('predict-results').innerHTML=`<div class="result-block"><div class="status-row"><div><div class="meta-label">Validación de predicción</div><div class="meta-value">No se obtuvo una clasificación</div></div>${pill(d.estado||'FAILED')}</div><div class="feedback visible error">${escapeHtml(err.mensaje||'La API no pudo realizar la predicción.')}</div>${lines}</div>`;return}
+      const p=n(d.probabilidad);let cls=d.prediccion===1?'Localizada':d.prediccion===0?'No localizada':'Clase no reconocida';const pct=p===null?'—':percent(p);
+      el('predict-results').innerHTML=`<div class="result-block"><div class="status-row"><div><div class="meta-label">Clasificación del Champion</div><div class="meta-value" style="font-size:23px">${escapeHtml(cls)}</div></div>${pill(d.estado)}</div>
+        <div class="donut-area"><div class="donut" style="--amount:${trackPercent((p??0)*100)}%"><div class="donut-hole"><strong>${pct}</strong><small>P(localizada=1)</small></div></div><div class="donut-copy"><strong>Probabilidad de localización</strong>El porcentaje corresponde a la probabilidad estimada de la clase <code>localizada = 1</code>, incluso cuando la predicción es 0.</div></div>
+        <p class="tiny-info" style="text-align:center;margin:12px 0 0">Esta estimación académica no determina el estado real de ninguna persona.</p></div>
+        <div class="result-block"><div class="metric-duo"><div class="inf-card"><div class="meta-label">Algoritmo</div><div class="value" style="font-size:20px">${escapeHtml(d.modelo||'—')}</div><div class="hint">Modelo Champion actual</div></div><div class="inf-card"><div class="meta-label">Versión Champion</div><div class="value">v${escapeHtml(d.version_champion??'—')}</div><div class="hint">Registro MLflow / Unity Catalog</div></div></div>
+        <div class="tiny-metrics"><span>Duración <strong>${escapeHtml(d.duracion||'—')}</strong></span><span>Clase <strong>${escapeHtml(d.prediccion)}</strong></span><span>Variable objetivo <strong>${escapeHtml(d.variable_objetivo||'localizada')}</strong></span></div><p class="tiny-info" style="margin-bottom:0">${escapeHtml(d.fecha_inicio||'')} → ${escapeHtml(d.fecha_fin||'')}</p></div>`;
+    }
+    el('predict-form').addEventListener('submit',async e=>{
+      e.preventDefault();if(!e.currentTarget.reportValidity())return;
+      let payload={};for(const [name] of FIELDS){payload[name]=el('input-'+name).value;if(!payload[name].trim()){setError('predict',{tipo:'ENTRADA_INVALIDA',mensaje:`Debes seleccionar ${name}.`});feedback('predict-feedback',`El campo ${name} es obligatorio.`,'error');return}}
+      setRequest('predict',payload,'POST /api/predecir · JSON enviado');
+      setError('predict');let btn=el('predict-submit');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Consultando Champion…';feedback('predict-feedback','Enviando las 12 variables a la API de Azure…');
+      try{const r=await api('/api/predecir',{method:'POST',body:JSON.stringify(payload)});setJSON('predict',r.data,r.http);renderPrediction(r.data);if(!r.ok||r.data?.error){setError('predict',r.data,r.http);learnModelOptions(r.data);}
+        feedback('predict-feedback',r.ok?'Predicción completada correctamente.':errorMessage(r.data,r.http),r.ok?'ok':'error');
+      }catch(e){setError('predict',e.message);feedback('predict-feedback',e.message,'error');}
+      finally{btn.disabled=false;btn.textContent='◎  Realizar predicción'}
+    });
+    document.querySelectorAll('[data-copy-request]').forEach(b=>b.addEventListener('click',()=>copyJSON(requestData[b.dataset.copyRequest],b)));
+    document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',async()=>{let type=b.dataset.copy;let val=type==='train'?trainData:predictData;if(!val){alert('Todavía no hay JSON para copiar.');return}try{await navigator.clipboard.writeText(JSON.stringify(val,null,2));let original=b.textContent;b.textContent='✓ Copiado';setTimeout(()=>b.textContent=original,1600)}catch{alert('No se pudo copiar automáticamente. Selecciona el JSON y cópialo manualmente.')}}));
+    document.querySelectorAll('[data-copy-error]').forEach(button=>button.addEventListener('click',async()=>{
+      const value=errorData[button.dataset.copyError];if(!value)return;
+      try{await navigator.clipboard.writeText(JSON.stringify(value,null,2));const old=button.textContent;button.textContent='✓ Copiado';setTimeout(()=>button.textContent=old,1500)}
+      catch{alert('No se pudo copiar automáticamente. Selecciona el detalle del error y cópialo manualmente.')}
+    }));
+    // Predicción es el módulo predeterminado. Se respeta #entrenamiento cuando se comparte el enlace.
+    setScreen(location.hash==='#entrenamiento'?'train':'predict');
+
+  </script>
+</body>
+</html>
