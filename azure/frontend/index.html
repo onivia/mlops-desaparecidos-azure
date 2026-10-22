@@ -391,7 +391,7 @@
       </section>
 
       <section class="section active" id="screen-predict" aria-labelledby="predict-title">
-        <div class="section-head"><div><h2 id="predict-title">01 · Predicción individual</h2></div><span class="small-note">POST /api/predecir-error · Síncrono</span></div>
+        <div class="section-head"><div><h2 id="predict-title">01 · Predicción individual</h2></div><span class="small-note">POST /api/predecir · Síncrono</span></div>
         <div class="work-grid">
           <div class="panel">
             <div class="panel-head"><div><h3>Variables del modelo</h3><p>Selecciona los valores; Databricks valida el catálogo del Champion</p></div><span class="pill">Modelo @champion</span></div>
@@ -639,7 +639,7 @@
       let payload={};for(const [name] of FIELDS){payload[name]=el('input-'+name).value;if(!payload[name].trim()){setError('predict',{tipo:'ENTRADA_INVALIDA',mensaje:`Debes seleccionar ${name}.`});feedback('predict-feedback',`El campo ${name} es obligatorio.`,'error');return}}
       setRequest('predict',payload,'POST /api/predecir · JSON enviado');
       setError('predict');let btn=el('predict-submit');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Consultando Champion…';feedback('predict-feedback','Enviando las 12 variables a la API de Azure…');
-      try{const r=await api('/api/predecir-error',{method:'POST',body:JSON.stringify(payload)});setJSON('predict',r.data,r.http);renderPrediction(r.data);if(!r.ok||r.data?.error){setError('predict',r.data,r.http);learnModelOptions(r.data);}
+      try{const r=await api('/api/predecir',{method:'POST',body:JSON.stringify(payload)});setJSON('predict',r.data,r.http);renderPrediction(r.data);if(!r.ok||r.data?.error){setError('predict',r.data,r.http);learnModelOptions(r.data);}
         feedback('predict-feedback',r.ok?'Predicción completada correctamente.':errorMessage(r.data,r.http),r.ok?'ok':'error');
       }catch(e){setError('predict',e.message);feedback('predict-feedback',e.message,'error');}
       finally{btn.disabled=false;btn.textContent='◎  Realizar predicción'}
