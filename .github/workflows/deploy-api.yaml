@@ -1,3 +1,4 @@
+
 name: Desplegar FastAPI MLOps Desaparecidos en Azure
 
 on:
@@ -71,14 +72,23 @@ jobs:
             --arg app "$DB_APP_URL" \
             --arg client_id "$DB_CLIENT_ID" \
             --arg client_secret "$DB_CLIENT_SECRET" \
+            --arg frontend_origin "https://stdesap1792649942.z22.web.core.windows.net" \
             '{
               location: $location,
               properties: {
                 environmentId: $env_id,
                 configuration: {
-                  ingress: {external: true, targetPort: 8000, allowInsecure: false},
+                  ingress: {
+                    external: true,
+                    targetPort: 8000,
+                    allowInsecure: false
+                  },
                   registries: [
-                    {server: $acr_server, username: $acr_user, passwordSecretRef: "acr-password"}
+                    {
+                      server: $acr_server,
+                      username: $acr_user,
+                      passwordSecretRef: "acr-password"
+                    }
                   ],
                   secrets: [
                     {name: "acr-password", value: $acr_password},
@@ -95,7 +105,8 @@ jobs:
                         {name: "DATABRICKS_WORKSPACE_URL", value: $workspace},
                         {name: "DATABRICKS_APP_URL", value: $app},
                         {name: "DATABRICKS_CLIENT_ID", value: $client_id},
-                        {name: "DATABRICKS_CLIENT_SECRET", secretRef: "databricks-client-secret"}
+                        {name: "DATABRICKS_CLIENT_SECRET", secretRef: "databricks-client-secret"},
+                        {name: "FRONTEND_ORIGIN", value: $frontend_origin}
                       ]
                     }
                   ],
@@ -104,20 +115,24 @@ jobs:
               }
             }' > "$APP_JSON"
 
-          # Mismo metodo ARM REST que funciono en el laboratorio del profesor.
+          # Crear o actualizar exclusivamente nuestra Container App.
           az rest --method put --url "$ARM_URL" --body "@$APP_JSON" --output none
 
           for i in $(seq 1 36); do
             STATE=$(az rest --method get --url "$ARM_URL" --query properties.provisioningState -o tsv)
             echo "Provisionamiento: $STATE"
+
             if [ "$STATE" = "Succeeded" ]; then
               exit 0
             fi
+
             if [ "$STATE" = "Failed" ] || [ "$STATE" = "Canceled" ]; then
               exit 1
             fi
+
             sleep 10
           done
+
           echo 'Tiempo de aprovisionamiento agotado.' >&2
           exit 1
 
@@ -126,6 +141,14 @@ jobs:
           set -euo pipefail
           SUB=$(az account show --query id -o tsv)
           ARM_URL="https://management.azure.com/subscriptions/$SUB/resourceGroups/$RESOURCE_GROUP/providers/Microsoft.App/containerApps/$APP_NAME?api-version=2024-03-01"
+
           FQDN=$(az rest --method get --url "$ARM_URL" --query properties.configuration.ingress.fqdn -o tsv)
+
           echo "API Azure: https://$FQDN"
-          curl --fail-with-body --retry 12 --retry-delay 10 --retry-all-errors --max-time 60 -sS "https://$FQDN/health" | jq -e '.estado == "OK"'
+
+          curl --fail-with-body \
+            --retry 12 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            --max-time 60 \
+            -sS "https://$FQDN/health" | jq -e '.estado == "OK"'
