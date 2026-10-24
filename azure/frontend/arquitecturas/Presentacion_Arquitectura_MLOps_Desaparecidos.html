@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arquitectura MLOps EAN v1.1</title>
+  <style>
+    :root{
+      --bg:#eef3fb;
+      --bg2:#f7faff;
+      --panel:#ffffff;
+      --panel2:#f3f7ff;
+      --panel3:#eaf1ff;
+      --text:#16233d;
+      --muted:#6a7a97;
+      --line:#d5dff2;
+      --primary:#2e63f2;
+      --primary2:#193f9a;
+      --accent:#62d4d9;
+      --success:#1cb978;
+      --shadow:0 18px 48px rgba(16,41,93,.12);
+      --sidebar:#112247;
+      --sidebar2:#182e60;
+      --sidebarText:#f6f9ff;
+      --hero:linear-gradient(135deg,#20396f 0%,#2f4f95 55%,#376391 100%);
+      --chip:#edf3ff;
+      --chipText:#3660cc;
+    }
+    body.dark{
+      --bg:#091220;
+      --bg2:#0c1628;
+      --panel:#0f1a2f;
+      --panel2:#0c1526;
+      --panel3:#111d34;
+      --text:#eef5ff;
+      --muted:#98abc9;
+      --line:#223452;
+      --primary:#71a3ff;
+      --primary2:#8ab1ff;
+      --accent:#70e6d4;
+      --success:#28d392;
+      --shadow:0 20px 44px rgba(0,0,0,.35);
+      --sidebar:#081325;
+      --sidebar2:#0e1d39;
+      --sidebarText:#f0f6ff;
+      --hero:linear-gradient(135deg,#102347 0%,#183568 55%,#245477 100%);
+      --chip:#14223d;
+      --chipText:#90b6ff;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Arial,sans-serif;
+      background: radial-gradient(circle at top right, rgba(98,212,217,.10), transparent 20%), var(--bg);
+      color:var(--text);
+    }
+    a{color:var(--primary);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .app{display:grid;grid-template-columns:190px 1fr;min-height:100vh}
+    .sidebar{
+      background:linear-gradient(180deg,var(--sidebar) 0%, var(--sidebar2) 100%);
+      color:var(--sidebarText);
+      padding:18px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      position:sticky;top:0;height:100vh;
+      border-right:1px solid rgba(255,255,255,.08);
+    }
+    .brand{display:flex;align-items:center;gap:12px;padding:2px 4px 4px}
+    .brand-icon{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,#5fb6ff,#7867ff);display:grid;place-items:center;box-shadow:0 8px 20px rgba(82,118,255,.25)}
+    .brand-icon svg{width:20px;height:20px;fill:white}
+    .brand h1{margin:0;font-size:18px;line-height:1.05}
+    .brand small{display:block;color:#d9e7ff;letter-spacing:.18em;font-size:10px;text-transform:uppercase;margin-top:4px}
+    .side-label{font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:#b5c7ee;padding:0 8px;margin-top:4px}
+    .nav{display:flex;flex-direction:column;gap:10px}
+    .nav a{display:flex;align-items:center;gap:12px;padding:14px 14px;border:1px solid rgba(255,255,255,.14);border-radius:16px;color:var(--sidebarText);text-decoration:none;background:rgba(255,255,255,.02);font-weight:700;transition:.22s}
+    .nav a:hover,.nav a.active{background:rgba(255,255,255,.10);transform:translateX(2px)}
+    .nav .n{width:30px;min-width:30px;height:30px;border-radius:10px;background:rgba(255,255,255,.08);display:grid;place-items:center;font-weight:800}
+    .sidebar-bottom{margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.10);font-size:13px;line-height:1.35}
+    .sidebar-bottom b{display:block;color:#fff;margin-bottom:6px}
+
+    .main{padding:20px 22px 18px;overflow:auto;height:100vh}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:14px}
+    .crumbs{font-weight:700;color:var(--muted)}
+    .crumbs span{color:var(--text)}
+    .actions{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:12px 16px;border-radius:16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+    .btn:hover{transform:translateY(-1px)}
+    .status{display:flex;align-items:center;gap:8px}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--success);box-shadow:0 0 0 4px rgba(28,185,120,.12)}
+    .screen{display:none;gap:14px}
+    .screen.active{display:flex;flex-direction:column}
+
+    .hero{background:var(--hero);color:#fff;border-radius:28px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+    .hero:before,.hero:after{content:"";position:absolute;border:1px solid rgba(255,255,255,.16);border-radius:50%}
+    .hero:before{width:240px;height:240px;right:-50px;top:-45px}
+    .hero:after{width:150px;height:150px;right:70px;top:30px}
+    .hero h2{margin:0 0 6px;font-size:22px;max-width:1100px;position:relative;z-index:1}
+    .hero p{margin:0;max-width:1000px;color:#e5eeff;position:relative;z-index:1}
+
+    .quicklinks{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:0 2px}
+    .flow-caption{font-size:13px;font-weight:800;color:var(--muted)}
+    .chips{display:flex;flex-wrap:wrap;gap:10px}
+    .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:13px;font-weight:700;color:var(--chipText);box-shadow:var(--shadow)}
+
+    .diagram-wrap{background:linear-gradient(180deg,var(--panel) 0%, var(--panel2) 100%);border:1px solid var(--line);border-radius:26px;padding:16px;box-shadow:var(--shadow)}
+    .diagram-title{margin:0 0 6px;font-size:18px}
+    .diagram-sub{margin:0 0 14px;color:var(--muted)}
+    .board{background:
+        linear-gradient(rgba(46,99,242,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(46,99,242,.06) 1px, transparent 1px),
+        linear-gradient(135deg, rgba(98,212,217,.06), rgba(98,212,217,.02));
+      background-size:32px 32px,32px 32px,100% 100%;
+      border:1px dashed var(--line);
+      border-radius:24px;
+      padding:18px;
+      overflow:hidden;
+    }
+    .flow-grid{display:grid;grid-template-columns:1fr 60px 1fr 60px 1fr 60px 1fr;gap:0;align-items:stretch}
+    .group{background:rgba(255,255,255,.18);border:1px solid var(--line);border-radius:24px;padding:14px;min-height:380px;backdrop-filter:blur(6px)}
+    body.dark .group{background:rgba(255,255,255,.03)}
+    .group h4{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+    .group p.meta{margin:0 0 12px;color:var(--muted);font-size:13px}
+    .cards{display:flex;flex-direction:column;gap:12px}
+    .info-card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:var(--shadow);
+      cursor:pointer;
+      transition:transform .2s,border-color .2s;
+      min-height:110px;
+    }
+    .info-card:hover{transform:translateY(-2px);border-color:var(--primary)}
+    .card-top{display:flex;gap:12px;align-items:flex-start;margin-bottom:8px}
+    .icon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--panel3);border:1px solid var(--line);flex:0 0 auto}
+    .icon svg{width:22px;height:22px}
+    .card-title{font-size:15px;font-weight:800;line-height:1.1}
+    .card-desc{font-size:13px;color:var(--muted);line-height:1.4}
+    .badge{display:inline-flex;margin-top:8px;background:var(--chip);color:var(--chipText);font-size:11px;font-weight:800;padding:5px 9px;border-radius:999px}
+    .mini-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .mini-links a{font-size:12px;font-weight:700}
+
+    .connector{position:relative;display:flex;align-items:center;justify-content:center;min-height:100%}
+    .connector .line{width:100%;height:4px;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:999px;position:relative;opacity:.55}
+    .connector .line:before{content:"";position:absolute;right:-2px;top:50%;transform:translateY(-50%) rotate(45deg);width:12px;height:12px;border-top:4px solid var(--accent);border-right:4px solid var(--accent);border-radius:2px}
+    .connector .pulse{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 6px rgba(98,212,217,.14);animation:moveDot 3.2s linear infinite}
+    .connector.c1 .pulse{animation-delay:.2s}
+    .connector.c2 .pulse{animation-delay:1.1s}
+    .connector.c3 .pulse{animation-delay:2.0s}
+    @keyframes moveDot{
+      0%{left:-6px;opacity:0}
+      10%{opacity:1}
+      100%{left:calc(100% - 6px);opacity:1}
+    }
+
+    .resource-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+    .resource{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+    .resource b{display:block;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .resource span{font-weight:800}
+
+    details.fold{background:var(--panel);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow)}
+    details.fold summary{list-style:none;cursor:pointer;padding:14px 18px;font-weight:800;display:flex;align-items:center;justify-content:space-between}
+    details.fold summary::-webkit-details-marker{display:none}
+    details.fold summary .arrow{transition:transform .2s}
+    details.fold[open] summary .arrow{transform:rotate(180deg)}
+    .fold-content{padding:0 18px 16px;color:var(--muted);line-height:1.55}
+    .bottom-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+    .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .pill{background:var(--chip);color:var(--chipText);border:1px solid var(--line);padding:8px 10px;border-radius:999px;font-size:12px;font-weight:800}
+
+    .footer{margin-top:8px;text-align:center;color:var(--muted);padding:12px 10px 4px;font-size:14px;line-height:1.5}
+    .footer b{display:block;color:var(--text);font-size:16px}
+
+    .modal{position:fixed;inset:0;background:rgba(8,14,28,.56);display:none;align-items:center;justify-content:center;padding:24px;z-index:50}
+    .modal.open{display:flex}
+    .modal-box{width:min(760px,100%);max-height:min(86vh,900px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:24px;box-shadow:0 24px 64px rgba(0,0,0,.32);padding:22px 22px 18px;position:relative}
+    .modal-box h3{margin:0 32px 10px 0;font-size:24px}
+    .modal-box .close{position:absolute;right:16px;top:14px;width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);font-size:22px;cursor:pointer;color:var(--text)}
+    .modal-box p,.modal-box li{color:var(--muted);line-height:1.6}
+    .modal-box ul{padding-left:20px}
+    .modal-box .links{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .modal-box .links a{padding:10px 12px;background:var(--chip);border:1px solid var(--line);border-radius:999px;font-weight:800;text-decoration:none}
+
+    @media (max-width: 1320px){
+      .flow-grid{grid-template-columns:1fr 40px 1fr 40px 1fr 40px 1fr}
+      .group{min-height:auto}
+    }
+    @media (max-width: 1180px){
+      .app{grid-template-columns:1fr}
+      .sidebar{position:relative;height:auto}
+      .main{height:auto}
+    }
+    @media (max-width: 1040px){
+      .flow-grid{grid-template-columns:1fr;gap:14px}
+      .connector{min-height:42px}
+      .connector .line{width:4px;height:42px;background:linear-gradient(180deg,var(--primary),var(--accent))}
+      .connector .line:before{right:auto;left:50%;top:auto;bottom:-1px;transform:translateX(-50%) rotate(135deg)}
+      .connector .pulse{animation:moveDotV 3s linear infinite;left:50%;transform:translateX(-50%)}
+      @keyframes moveDotV{0%{top:-6px;opacity:0}10%{opacity:1}100%{top:calc(100% - 6px);opacity:1}}
+      .resource-bar,.bottom-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M11 2h2v20h-2zM2 11h20v2H2zM4.9 4.9l1.4-1.4 12.8 12.8-1.4 1.4zM17.7 3.5l1.4 1.4L6.3 17.7 4.9 16.3z"/></svg>
+        </div>
+        <div>
+          <h1>MLOps</h1>
+          <small>Proyecto · EAN 2026</small>
+        </div>
+      </div>
+      <div class="side-label">Arquitecturas</div>
+      <nav class="nav">
+        <a href="#general" data-screen-link class="active"><span class="n">01</span> <span>General</span></a>
+        <a href="#databricks" data-screen-link><span class="n">02</span> <span>Databricks</span></a>
+        <a href="#azure" data-screen-link><span class="n">03</span> <span>Azure</span></a>
+        <a href="#github" data-screen-link><span class="n">04</span> <span>GitHub</span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <b>Estudiante: Diego Vega</b>
+        <b>Estudiante: Oscar Nivia</b>
+        <div>MLOps</div>
+        <div>Maestría en Ciencia de Datos</div>
+        <div>Universidad EAN · 2026</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="crumbs">MLOps / <span id="crumbLabel">Arquitectura General</span></div>
+        <div class="actions">
+          <div class="btn status"><span class="dot"></span> Arquitectura lista</div>
+          <button class="btn" id="themeBtn">🌙 Oscuro</button>
+          <button class="btn" id="fullBtn">⛶ Pantalla completa</button>
+        </div>
+      </div>
+
+      <!-- GENERAL -->
+      <section class="screen active" id="general" data-title="Arquitectura General">
+        <div class="hero">
+          <h2>Arquitectura General - Modelo ML Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</h2>
+          <p>Vista global de la solución: frontend publicado en Azure, APIs FastAPI, operación del modelo en Databricks y automatización CI/CD con GitHub Actions.</p>
+        </div>
+        <div class="quicklinks">
+          <div class="flow-caption">Flujo principal: Usuario final → Frontend Azure → FastAPI en Azure → Databricks → Respuesta al usuario</div>
+          <div class="chips">
+            <a class="chip" href="https://stdesap1792649942.z22.web.core.windows.net/" target="_blank">Frontend Azure</a>
+            <a class="chip" href="https://github.com/onivia/mlops-desaparecidos-azure" target="_blank">Repositorio GitHub</a>
+            <a class="chip" href="https://dbc-b52db97b-eac4.cloud.databricks.com/" target="_blank">Workspace Databricks</a>
+            <a class="chip" href="https://mail.google.com/mail" target="_blank">Gmail CI/CD</a>
+          </div>
+        </div>
+        <div class="diagram-wrap">
+
+          <div class="board">
+            <div class="flow-grid">
+              <div class="group">
+                <h4>Origen de la petición</h4>
+                <p class="meta">Consumo de la solución y acceso al portal público.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Usuario final" data-content="El usuario final accede al sitio publicado en Azure Storage Static Website. Desde allí puede ejecutar dos operaciones principales: 1) predicción individual y 2) consulta/seguimiento de entrenamiento. La URL pública del portal es https://stdesap1792649942.z22.web.core.windows.net/." data-links='[{"label":"Abrir frontend","url":"https://stdesap1792649942.z22.web.core.windows.net/"}]'>
+                    <div class="card-top"><div class="icon user-ic"></div><div><div class="card-title">Usuario final</div><div class="card-desc">Navega al portal, ejecuta predicción o consulta un entrenamiento histórico.</div></div></div>
+                    <span class="badge">Frontend público</span>
+                    <div class="mini-links"><a href="https://stdesap1792649942.z22.web.core.windows.net/" target="_blank">stdesap1792649942.z22.web.core.windows.net</a></div>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c1"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Azure</h4>
+                <p class="meta">Publicación del frontend y ejecución del backend FastAPI.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Azure Storage Static Website" data-content="El frontend HTML ilustrado se publica en un Azure Storage Account con la funcionalidad Static Website habilitada. Este recurso entrega el sitio de manera pública para la sustentación y el consumo del sistema." data-links='[{"label":"Sitio público","url":"https://stdesap1792649942.z22.web.core.windows.net/"}]'>
+                    <div class="card-top"><div class="icon azure-ic"></div><div><div class="card-title">Azure Storage Static Website</div><div class="card-desc">Hospeda el HTML ilustrado, estilos y navegación del sitio.</div></div></div>
+                    <span class="badge">Frontend</span>
+                  </div>
+                  <div class="info-card" data-title="Azure Container Apps · FastAPI + Docker" data-content="La API backend vive en Azure Container Apps. La imagen se construye con Docker y se publica en Azure Container Registry. La API expone /health, /api/predecir, /api/entrenar y /api/entrenar/{run_id}." data-links='[{"label":"Ver Azure","url":"#azure"}]'>
+                    <div class="card-top"><div class="icon api-ic"></div><div><div class="card-title">Azure Container Apps · FastAPI + Docker</div><div class="card-desc">Proxy API REST: predicción, entrenamiento y consulta por run_id.</div></div></div>
+                    <span class="badge">Backend</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c2"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Databricks</h4>
+                <p class="meta">Core ML: serving, jobs de entrenamiento y monitoreo del modelo.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Endpoint - Model Serving" data-content="Databricks expone la lógica del modelo mediante un endpoint de serving. Desde Azure se consumen operaciones de entrenamiento, consulta de resultados y predicción. La inferencia usa las 12 variables categóricas del modelo." data-links='[{"label":"Ir a Databricks","url":"https://dbc-b52db97b-eac4.cloud.databricks.com/"}]'>
+                    <div class="card-top"><div class="icon db-ic"></div><div><div class="card-title">Endpoint - Model Serving</div><div class="card-desc">Exposición de la lógica de entrenar, consultar y predecir.</div></div></div>
+                    <span class="badge">Serving</span>
+                  </div>
+                  <div class="info-card" data-title="2 Jobs de entrenamiento" data-content="La operación del pipeline se apoya en dos jobs: JobPadre01 y iteracion_mlops. En conjunto orquestan los notebooks NB00 a NB06 para configuración, extracción, caracterización, transformación, entrenamiento, promoción y monitoreo." data-links='[{"label":"Ver arquitectura Databricks","url":"#databricks"}]'>
+                    <div class="card-top"><div class="icon job-ic"></div><div><div class="card-title">2 Jobs de entrenamiento</div><div class="card-desc">JobPadre01 + iteracion_mlops (NB00 → NB06).</div></div></div>
+                    <span class="badge">Operación ML</span>
+                  </div>
+                  <div class="info-card" data-title="MLflow · Delta · Drift" data-content="Databricks gestiona el registro de modelos, métricas y versiones mediante MLflow y Unity Catalog. Los resultados y datasets se conservan en Delta Lake. El monitoreo de drift contempla las métricas KS (Kolmogorov-Smirnov) y PSI." data-links='[{"label":"Dataset base","url":"https://www.datos.gov.co/Justicia-y-Derecho/Desaparecidos-en-Colombia-Hist-rico-agosto-de-2026/8hqm-7fdt"}]'>
+                    <div class="card-top"><div class="icon drift-ic"></div><div><div class="card-title">MLflow · Delta · Drift</div><div class="card-desc">Versionamiento, resultados y monitoreo KS + PSI.</div></div></div>
+                    <span class="badge">Core ML</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c3"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>GitHub CI/CD</h4>
+                <p class="meta">Versionamiento, pruebas automáticas, correo y despliegue.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Repositorio GitHub" data-content="El código fuente del frontend, la API y los workflows vive en el repositorio onivia/mlops-desaparecidos-azure. Diego Vega y Oscar Nivia trabajan cambios en ramas feature, luego los validan mediante Pull Request." data-links='[{"label":"Abrir repositorio","url":"https://github.com/onivia/mlops-desaparecidos-azure"}]'>
+                    <div class="card-top"><div class="icon gh-ic"></div><div><div class="card-title">Repositorio GitHub</div><div class="card-desc">Código fuente, ramas, commits y Pull Requests.</div></div></div>
+                    <span class="badge">Código</span>
+                  </div>
+                  <div class="info-card" data-title="GitHub Actions CI/CD" data-content="El workflow ci-pr.yaml ejecuta 7 validaciones automáticas sobre cada Pull Request. Luego, al hacer merge a main, se activan los workflows de despliegue de frontend y API hacia Azure." data-links='[{"label":"Abrir GitHub Actions","url":"https://github.com/onivia/mlops-desaparecidos-azure/actions"}]'>
+                    <div class="card-top"><div class="icon action-ic"></div><div><div class="card-title">GitHub Actions CI/CD</div><div class="card-desc">CI para PR y CD para frontend y API.</div></div></div>
+                    <span class="badge">Automatización</span>
+                  </div>
+                  <div class="info-card" data-title="Notificación Gmail" data-content="Cuando el CI termina, GitHub Actions envía un correo SUCCESS o FAILED a ohnivia@gmail.com, con copia a dvegaar88683@universidadean.edu.co. El mensaje resume el resultado, el número de PR, los tests aprobados y, si falla, detalla la prueba fallida." data-links='[{"label":"Abrir Gmail","url":"https://mail.google.com/mail"}]'>
+                    <div class="card-top"><div class="icon mail-ic"></div><div><div class="card-title">Notificación Gmail</div><div class="card-desc">Alertas SUCCESS / FAILED con detalle de pruebas.</div></div></div>
+                    <span class="badge">Observabilidad</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="resource-bar">
+            <div class="resource"><b>Frontend público</b><span><a href="https://stdesap1792649942.z22.web.core.windows.net/" target="_blank">Azure Storage Static Website</a></span></div>
+            <div class="resource"><b>Workspace ML</b><span><a href="https://dbc-b52db97b-eac4.cloud.databricks.com/" target="_blank">Databricks Workspace</a></span></div>
+            <div class="resource"><b>Repositorio</b><span><a href="https://github.com/onivia/mlops-desaparecidos-azure" target="_blank">onivia/mlops-desaparecidos-azure</a></span></div>
+            <div class="resource"><b>Fuente de datos</b><span><a href="https://www.datos.gov.co/Justicia-y-Derecho/Desaparecidos-en-Colombia-Hist-rico-agosto-de-2026/8hqm-7fdt" target="_blank">datos.gov.co · histórico de desaparecidos</a></span></div>
+          </div>
+        </div>
+        <div class="bottom-grid">
+          <details class="fold">
+            <summary>Detalles <span class="arrow">▾</span></summary>
+            <div class="fold-content">
+              <p><b>Flujo 1 · Usuario:</b> el usuario ingresa al frontend en Azure, ejecuta una predicción o consulta un entrenamiento; la petición pasa a FastAPI en Azure Container Apps, que a su vez llama los componentes de Databricks y devuelve al portal el JSON y su visualización.</p>
+              <p><b>Flujo 2 · Desarrollo:</b> cuando Diego u Oscar hacen un cambio en el repositorio, crean una rama y un Pull Request. GitHub Actions ejecuta 7 validaciones automáticas; si el PR queda en verde y se hace merge a main, se disparan los despliegues automáticos del frontend y, cuando aplica, de la API.</p>
+            </div>
+          </details>
+          <details class="fold">
+            <summary>Elementos clave <span class="arrow">▾</span></summary>
+            <div class="fold-content">
+              <div class="pill-row">
+                <span class="pill">Frontend HTML ilustrado</span>
+                <span class="pill">FastAPI + Docker</span>
+                <span class="pill">2 Jobs de entrenamiento</span>
+                <span class="pill">MLflow Champion / Challenger</span>
+                <span class="pill">Drift: KS + PSI</span>
+                <span class="pill">GitHub Actions CI/CD</span>
+                <span class="pill">Notificación Gmail</span>
+                <span class="pill">Dataset histórico 1930–2026</span>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="footer">
+          <b>Diego Vega - Oscar Nivia</b>
+          <div>MLOps · Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</div>
+          <div>Universidad EAN · Azure + Databricks + GitHub</div>
+          <div>2026</div>
+        </div>
+      </section>
+
+      <!-- DATABRICKS -->
+      <section class="screen" id="databricks" data-title="Arquitectura Databricks">
+        <div class="hero">
+          <h2>Arquitectura Databricks - Core y Operación Modelo ML</h2>
+          <p>Explica la lógica del pipeline en Databricks: dataset histórico, jobs, notebooks, MLflow, drift e inferencia del Champion vigente.</p>
+        </div>
+        <div class="quicklinks">
+          <div class="flow-caption">Flujo principal: Dataset histórico → Jobs y notebooks → MLflow / Delta / Drift → Endpoints entrenar y predecir</div>
+          <div class="chips">
+            <a class="chip" href="#general">General</a>
+            <a class="chip" href="https://dbc-b52db97b-eac4.cloud.databricks.com/" target="_blank">Workspace Databricks</a>
+            <a class="chip" href="https://www.datos.gov.co/Justicia-y-Derecho/Desaparecidos-en-Colombia-Hist-rico-agosto-de-2026/8hqm-7fdt" target="_blank">Dataset fuente</a>
+          </div>
+        </div>
+        <div class="diagram-wrap">
+
+          <div class="board">
+            <div class="flow-grid">
+              <div class="group">
+                <h4>Datos y origen</h4>
+                <p class="meta">Base histórica nacional y variables del problema.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Dataset histórico" data-content="La base del proyecto proviene de datos.gov.co y corresponde al histórico de personas desaparecidas en Colombia. Contiene variables categóricas como ciudad, localidad, sexo, rango de edad, escolaridad, estado civil, etnia, país de nacimiento, pertenencia grupal, registrado por, mes y día. El periodo utilizado se presentó como histórico 1930–2026." data-links='[{"label":"Abrir dataset","url":"https://www.datos.gov.co/Justicia-y-Derecho/Desaparecidos-en-Colombia-Hist-rico-agosto-de-2026/8hqm-7fdt"}]'>
+                    <div class="card-top"><div class="icon data-ic"></div><div><div class="card-title">Dataset histórico</div><div class="card-desc">Registros de personas desaparecidas en Colombia y variables usadas en el modelo.</div></div></div>
+                    <span class="badge">datos.gov.co</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c1"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Jobs y notebooks</h4>
+                <p class="meta">Orquestación del pipeline y lógica NB00 → NB06.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="JobPadre01 · NB00" data-content="JobPadre01 controla la configuración inicial del pipeline y parámetros globales, incluyendo número de iteraciones, tamaño de lote y el uso del job de iteración." >
+                    <div class="card-top"><div class="icon job-ic"></div><div><div class="card-title">JobPadre01 · NB00</div><div class="card-desc">Configura el pipeline y gobierna los parámetros base.</div></div></div>
+                    <span class="badge">Orquestación</span>
+                  </div>
+                  <div class="info-card" data-title="iteracion_mlops · NB01 → NB06" data-content="El job iteracion_mlops encadena los notebooks NB01 a NB06: extracción, caracterización, transformación, entrenamiento, promoción y monitoreo. En el flujo real, el entrenamiento devolvió resultados con dos iteraciones completadas y champion RandomForest v6." >
+                    <div class="card-top"><div class="icon notebook-ic"></div><div><div class="card-title">iteracion_mlops · NB01 → NB06</div><div class="card-desc">Extracción, transformación, entrenamiento, promoción y monitoreo.</div></div></div>
+                    <span class="badge">Ejecución</span>
+                  </div>
+                  <div class="info-card" data-title="Champion / Challenger" data-content="La comparación de modelos se soporta en métricas como AUC y F1. El pipeline conserva el Champion cuando supera o mantiene el desempeño frente al Challenger. En las pruebas realizadas, el modelo champion final se mantuvo como RandomForest versión 6." >
+                    <div class="card-top"><div class="icon champ-ic"></div><div><div class="card-title">Champion / Challenger</div><div class="card-desc">Selección por AUC y F1; Champion vigente: RandomForest v6.</div></div></div>
+                    <span class="badge">Evaluación</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c2"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Persistencia y gobierno</h4>
+                <p class="meta">Datos, resultados, métricas y control de versiones.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Delta Lake" data-content="Delta Lake conserva datasets preparados, resultados intermedios y salidas analíticas del pipeline. Facilita consistencia y trazabilidad sobre la data del proyecto." >
+                    <div class="card-top"><div class="icon delta-ic"></div><div><div class="card-title">Delta Lake</div><div class="card-desc">Persistencia de datos, resultados y métricas.</div></div></div>
+                    <span class="badge">Storage lógico</span>
+                  </div>
+                  <div class="info-card" data-title="MLflow + Unity Catalog" data-content="MLflow se usa para registro de modelos, métricas, experimentos y versiones. Unity Catalog refuerza el gobierno y la organización de activos. Allí se identifica el champion vigente consumido por inferencia." >
+                    <div class="card-top"><div class="icon mlflow-ic"></div><div><div class="card-title">MLflow + Unity Catalog</div><div class="card-desc">Registro de modelos, versiones y trazabilidad.</div></div></div>
+                    <span class="badge">Gobierno</span>
+                  </div>
+                  <div class="info-card" data-title="Drift: KS + PSI" data-content="El monitoreo de drift utiliza al menos dos métricas: KS (Kolmogorov-Smirnov) y PSI. En las evidencias obtenidas se observó un caso con drift activo, reportando KS y un PSI global, además de variables con mayor aporte al cambio de distribución." >
+                    <div class="card-top"><div class="icon drift-ic"></div><div><div class="card-title">Drift: KS + PSI</div><div class="card-desc">Monitoreo del comportamiento y cambio de datos.</div></div></div>
+                    <span class="badge">Monitoreo</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c3"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Consumo y serving</h4>
+                <p class="meta">Desarrollo, endpoints y lógica de inferencia.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Workspace Databricks" data-content="El workspace Databricks se usa para desarrollar y ejecutar notebooks y jobs, así como para administrar el serving endpoint." data-links='[{"label":"Abrir workspace","url":"https://dbc-b52db97b-eac4.cloud.databricks.com/"}]'>
+                    <div class="card-top"><div class="icon db-ic"></div><div><div class="card-title">Workspace Databricks</div><div class="card-desc">Entorno de desarrollo y ejecución de notebooks y jobs.</div></div></div>
+                    <span class="badge">Plataforma</span>
+                  </div>
+                  <div class="info-card" data-title="DATABRICKS ENDPOINT" data-content="El endpoint expone las operaciones necesarias para la integración con FastAPI: entrenar, entrenar/{run_id} y predecir. FastAPI se apoya en estas rutas para atender las solicitudes del frontend." >
+                    <div class="card-top"><div class="icon serve-ic"></div><div><div class="card-title">DATABRICKS ENDPOINT</div><div class="card-desc">Endpoints: entrenar · entrenar/{run_id} · predecir.</div></div></div>
+                    <span class="badge">Serving</span>
+                  </div>
+                  <div class="info-card" data-title="Endpoint + inferencia.py" data-content="La lógica de predicción usa el champion vigente y una entrada con 12 variables categóricas. El módulo de inferencia encapsula la preparación del payload y la respuesta final del modelo." >
+                    <div class="card-top"><div class="icon infer-ic"></div><div><div class="card-title">Endpoint + inferencia.py</div><div class="card-desc">Predicción con las 12 variables categóricas del modelo.</div></div></div>
+                    <span class="badge">Inferencia</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-grid">
+          <details class="fold">
+            <summary>Notebooks del pipeline <span class="arrow">▾</span></summary>
+            <div class="fold-content">
+              <p><b>NB00_configuración:</b> parámetros globales.</p>
+              <p><b>NB01_extracción:</b> carga y preparación inicial del dataset.</p>
+              <p><b>NB02_caracterización:</b> entendimiento y perfilado de datos.</p>
+              <p><b>NB03_transformación:</b> transformación y preparación para entrenamiento.</p>
+              <p><b>NB04_entrenamiento:</b> entrenamiento de los algoritmos evaluados.</p>
+              <p><b>NB05_promoción:</b> evaluación y comparación Champion vs Challenger.</p>
+              <p><b>NB06_monitoreo:</b> drift con KS y PSI.</p>
+            </div>
+          </details>
+          <details class="fold">
+            <summary>Variables usadas por predicción <span class="arrow">▾</span></summary>
+            <div class="fold-content">
+              <div class="pill-row">
+                <span class="pill">Ciudad</span><span class="pill">Localidad</span><span class="pill">Sexo</span><span class="pill">RangoEdad</span><span class="pill">Escolaridad</span><span class="pill">EstadoCivil</span><span class="pill">Etnia</span><span class="pill">PaisNacimiento</span><span class="pill">PertenenciaGrupal</span><span class="pill">RegistradoPor</span><span class="pill">Mes</span><span class="pill">Dia</span>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="footer">
+          <b>Diego Vega - Oscar Nivia</b>
+          <div>MLOps · Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</div>
+          <div>Universidad EAN · Azure + Databricks + GitHub</div>
+          <div>2026</div>
+        </div>
+      </section>
+
+      <!-- AZURE -->
+      <section class="screen" id="azure" data-title="Arquitectura Azure">
+        <div class="hero">
+          <h2>Arquitectura Azure - Publicación web, APIs e infraestructura cloud</h2>
+          <p>Describe los recursos Azure que publican el frontend, ejecutan la API FastAPI, almacenan imágenes Docker y enlazan con Databricks.</p>
+        </div>
+        <div class="quicklinks">
+          <div class="flow-caption">Flujo principal: Usuario final → Azure Storage Static Website → Azure Container Apps → Databricks</div>
+          <div class="chips">
+            <a class="chip" href="https://stdesap1792649942.z22.web.core.windows.net/" target="_blank">Sitio público</a>
+            <a class="chip" href="https://mail.google.com/mail" target="_blank">Gmail CI/CD</a>
+          </div>
+        </div>
+        <div class="diagram-wrap">
+
+          <div class="board">
+            <div class="flow-grid">
+              <div class="group">
+                <h4>Acceso externo</h4>
+                <p class="meta">Punto de entrada del jurado y usuario final.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Usuario final · URL pública" data-content="El jurado y los usuarios acceden al sitio público desplegado en Azure Storage Static Website. La URL entregada es https://stdesap1792649942.z22.web.core.windows.net/." data-links='[{"label":"Abrir sitio","url":"https://stdesap1792649942.z22.web.core.windows.net/"}]'>
+                    <div class="card-top"><div class="icon user-ic"></div><div><div class="card-title">Usuario final</div><div class="card-desc">Acceso directo al frontend del proyecto.</div></div></div>
+                    <span class="badge">URL pública</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c1"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Frontend y backend</h4>
+                <p class="meta">Recursos publicados para interfaz y API.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Azure Storage Account" data-content="Cuenta de almacenamiento con Static Website habilitado. Recurso usado para publicar el HTML de la interfaz de sustentación y pruebas." >
+                    <div class="card-top"><div class="icon azure-ic"></div><div><div class="card-title">Azure Storage Account</div><div class="card-desc">stdesap1792649942 · sitio web estático del frontend.</div></div></div>
+                    <span class="badge">Frontend</span>
+                  </div>
+                  <div class="info-card" data-title="Azure Container Apps" data-content="La aplicación api-mlops-desaparecidos corre como Container App y encapsula FastAPI + Docker. Se despliega automáticamente desde GitHub Actions tras merge a main." >
+                    <div class="card-top"><div class="icon api-ic"></div><div><div class="card-title">Azure Container Apps</div><div class="card-desc">api-mlops-desaparecidos · FastAPI + Docker.</div></div></div>
+                    <span class="badge">Backend</span>
+                  </div>
+                  <div class="info-card" data-title="API REST pública" data-content="La API pública expone /health, /api/predecir, /api/entrenar y /api/entrenar/{run_id}. Fue validada mediante curl y desde el frontend." >
+                    <div class="card-top"><div class="icon serve-ic"></div><div><div class="card-title">API REST pública</div><div class="card-desc">Health, predicción, entrenamiento y consulta por run_id.</div></div></div>
+                    <span class="badge">Endpoints</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c2"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Despliegue y runtime</h4>
+                <p class="meta">Imágenes, entorno de ejecución y observabilidad.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Azure Container Registry" data-content="ACR almacena la imagen Docker de la API. GitHub Actions construye y publica la imagen antes de actualizar la Container App." >
+                    <div class="card-top"><div class="icon acr-ic"></div><div><div class="card-title">Azure Container Registry</div><div class="card-desc">acrmlopsean60126 · imágenes Docker de la API.</div></div></div>
+                    <span class="badge">ACR</span>
+                  </div>
+                  <div class="info-card" data-title="Managed Environment" data-content="El entorno env-mlops-ean sirve de runtime para la Container App, centralizando configuración operativa del servicio." >
+                    <div class="card-top"><div class="icon env-ic"></div><div><div class="card-title">Managed Environment</div><div class="card-desc">env-mlops-ean · runtime de la Container App.</div></div></div>
+                    <span class="badge">Runtime</span>
+                  </div>
+                  <div class="info-card" data-title="Log Analytics" data-content="El recurso log-mlops-ean recopila telemetría y sirve como apoyo de observabilidad de la Container App y el entorno." >
+                    <div class="card-top"><div class="icon log-ic"></div><div><div class="card-title">Log Analytics</div><div class="card-desc">log-mlops-ean · apoyo para observabilidad.</div></div></div>
+                    <span class="badge">Monitoreo</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c3"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Integración externa</h4>
+                <p class="meta">Salida segura a servicios complementarios.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Databricks externo" data-content="Azure se integra con el workspace de Databricks mediante la API backend. FastAPI encapsula la autenticación y consumo del endpoint ML." data-links='[{"label":"Abrir Databricks","url":"https://dbc-b52db97b-eac4.cloud.databricks.com/"}]'>
+                    <div class="card-top"><div class="icon db-ic"></div><div><div class="card-title">Databricks externo</div><div class="card-desc">Destino funcional para entrenamiento, consulta e inferencia.</div></div></div>
+                    <span class="badge">Integración</span>
+                  </div>
+                  <div class="info-card" data-title="Gmail CI/CD" data-content="Aunque el correo se envía desde GitHub Actions, desde la vista Azure se incorpora como soporte operativo porque sirve para confirmar despliegues SUCCESS/FAILED y pruebas CI/CD." data-links='[{"label":"Abrir Gmail","url":"https://mail.google.com/mail"}]'>
+                    <div class="card-top"><div class="icon mail-ic"></div><div><div class="card-title">Gmail CI/CD</div><div class="card-desc">Consulta correos SUCCESS / FAILED del flujo CI/CD.</div></div></div>
+                    <span class="badge">Soporte</span>
+                  </div>
+                  <div class="info-card" data-title="Resource Group" data-content="El resource group principal del laboratorio es rg-mlops-ean, ubicado en West US. Allí se agrupan los recursos del frontend, API, ACR, entorno y observabilidad." >
+                    <div class="card-top"><div class="icon rg-ic"></div><div><div class="card-title">Resource Group</div><div class="card-desc">rg-mlops-ean · West US.</div></div></div>
+                    <span class="badge">Infraestructura</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="resource-bar">
+            <div class="resource"><b>Storage</b><span>stdesap1792649942</span></div>
+            <div class="resource"><b>Container App</b><span>api-mlops-desaparecidos</span></div>
+            <div class="resource"><b>Azure Container Registry (ACR)</b><span>acrmlopsean60126</span></div>
+            <div class="resource"><b>Environment</b><span>env-mlops-ean</span></div>
+          </div>
+        </div>
+        <div class="footer">
+          <b>Diego Vega - Oscar Nivia</b>
+          <div>MLOps · Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</div>
+          <div>Universidad EAN · Azure + Databricks + GitHub</div>
+          <div>2026</div>
+        </div>
+      </section>
+
+      <!-- GITHUB -->
+      <section class="screen" id="github" data-title="Arquitectura GitHub">
+        <div class="hero">
+          <h2>Arquitectura GitHub - Gestión de código, calidad y automatización CI/CD</h2>
+          <p>Resume el flujo de trabajo con ramas, Pull Request, pruebas automáticas, correo SUCCESS / FAILED y despliegue continuo hacia Azure.</p>
+        </div>
+        <div class="quicklinks">
+          <div class="flow-caption">Flujo principal: Cambio local → Commit/Push → Pull Request → CI (7 pruebas) → Merge → CD y correo</div>
+          <div class="chips">
+            <a class="chip" href="https://github.com/onivia/mlops-desaparecidos-azure" target="_blank">Repositorio</a>
+            <a class="chip" href="https://github.com/onivia/mlops-desaparecidos-azure/actions" target="_blank">GitHub Actions</a>
+            <a class="chip" href="https://mail.google.com/mail" target="_blank">Gmail CI/CD</a>
+          </div>
+        </div>
+        <div class="diagram-wrap">
+
+          <div class="board">
+            <div class="flow-grid">
+              <div class="group">
+                <h4>Trabajo local</h4>
+                <p class="meta">Cambios realizados por Diego u Oscar en sus equipos.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Cambio local" data-content="El trabajo comienza con un ajuste en HTML, API, tests o workflows. Un ejemplo real fue cambiar deliberadamente el endpoint de /api/predecir a /api/predecir-error para provocar un fallo controlado y demostrar el CI." >
+                    <div class="card-top"><div class="icon laptop-ic"></div><div><div class="card-title">Cambio local</div><div class="card-desc">HTML, API, tests o workflows ajustados por los estudiantes.</div></div></div>
+                    <span class="badge">Inicio</span>
+                  </div>
+                  <div class="info-card" data-title="Commit / Push" data-content="Una vez hecho el cambio, se guarda en una rama feature con commit y push al repositorio remoto. Esto prepara la apertura del Pull Request sin afectar main." >
+                    <div class="card-top"><div class="icon git-ic"></div><div><div class="card-title">Commit / Push</div><div class="card-desc">Versionamiento del cambio en una rama de trabajo.</div></div></div>
+                    <span class="badge">Git</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c1"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Repositorio y PR</h4>
+                <p class="meta">Ramas, Pull Request y gate antes del merge.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Repositorio GitHub" data-content="Repositorio principal: onivia/mlops-desaparecidos-azure. Centraliza frontend, API, workflows y documentación técnica del proyecto." data-links='[{"label":"Abrir repo","url":"https://github.com/onivia/mlops-desaparecidos-azure"}]'>
+                    <div class="card-top"><div class="icon gh-ic"></div><div><div class="card-title">Repositorio GitHub</div><div class="card-desc">Código, ramas y artefactos del proyecto.</div></div></div>
+                    <span class="badge">Código</span>
+                  </div>
+                  <div class="info-card" data-title="Pull Request a main" data-content="El Pull Request permite validar los cambios antes de integrarlos a main. Sobre el PR corre ci-pr.yaml. Durante la demostración se crearon PRs de prueba para mostrar los escenarios FAILED y SUCCESS." >
+                    <div class="card-top"><div class="icon pr-ic"></div><div><div class="card-title">Pull Request a main</div><div class="card-desc">Espacio para validar cambios antes del merge.</div></div></div>
+                    <span class="badge">PR</span>
+                  </div>
+                  <div class="info-card" data-title="Merge a main" data-content="Si el PR queda en verde, se hace merge a main. Ese evento dispara los workflows de despliegue continuo. En el laboratorio se realizó merge exitoso para republicar el frontend y la API." >
+                    <div class="card-top"><div class="icon merge-ic"></div><div><div class="card-title">Merge a main</div><div class="card-desc">Habilita el flujo de despliegue continuo.</div></div></div>
+                    <span class="badge">Gate</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c2"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>GitHub Actions</h4>
+                <p class="meta">Workflows de integración y despliegue.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="CI · ci-pr.yaml" data-content="El workflow ci-pr.yaml corre sobre Pull Request y ejecuta 7 validaciones automáticas del frontend y el contrato esperado hacia la API. Si alguna falla, el PR queda en rojo y se envía correo FAILED; si todas pasan, el PR queda apto para revisión y merge." >
+                    <div class="card-top"><div class="icon action-ic"></div><div><div class="card-title">CI · ci-pr.yaml</div><div class="card-desc">7 pruebas automáticas sobre el Pull Request.</div></div></div>
+                    <span class="badge">Integración continua</span>
+                  </div>
+                  <div class="info-card" data-title="CD · deploy-frontend.yaml" data-content="Tras merge a main, deploy-frontend.yaml republica automáticamente el HTML en Azure Storage Static Website. Se verificó en laboratorio que el cambio quedaba visible en el frontend publicado." >
+                    <div class="card-top"><div class="icon deploy-ic"></div><div><div class="card-title">CD · deploy-frontend.yaml</div><div class="card-desc">Publica el HTML en Azure Storage.</div></div></div>
+                    <span class="badge">Despliegue frontend</span>
+                  </div>
+                  <div class="info-card" data-title="CD · deploy-api.yaml" data-content="Cuando el cambio impacta la API, deploy-api.yaml construye la imagen Docker, la publica en ACR y actualiza la Azure Container App usando autenticación OIDC con Azure." >
+                    <div class="card-top"><div class="icon docker-ic"></div><div><div class="card-title">CD · deploy-api.yaml</div><div class="card-desc">Docker → ACR → Azure Container Apps.</div></div></div>
+                    <span class="badge">Despliegue API</span>
+                  </div>
+                </div>
+              </div>
+              <div class="connector c3"><div class="line"></div><div class="pulse"></div></div>
+              <div class="group">
+                <h4>Notificación y despliegue</h4>
+                <p class="meta">Salida visible de la automatización.</p>
+                <div class="cards">
+                  <div class="info-card" data-title="Correo SUCCESS / FAILED" data-content="GitHub Actions envía mensajes desde ohnivia@gmail.com a ohnivia@gmail.com con copia a dvegaar88683@universidadean.edu.co. En FAILED resume tests aprobados/fallidos y detalla la prueba fallida. En SUCCESS informa que el PR quedó listo para merge." data-links='[{"label":"Abrir Gmail","url":"https://mail.google.com/mail"}]'>
+                    <div class="card-top"><div class="icon mail-ic"></div><div><div class="card-title">Correo SUCCESS / FAILED</div><div class="card-desc">Notificación inmediata con resumen de pruebas.</div></div></div>
+                    <span class="badge">Email</span>
+                  </div>
+                  <div class="info-card" data-title="República frontend" data-content="El frontend en Azure Storage se actualiza automáticamente después del merge si el cambio impacta el HTML del portal." >
+                    <div class="card-top"><div class="icon azure-ic"></div><div><div class="card-title">República frontend</div><div class="card-desc">Actualización automática del sitio web en Azure.</div></div></div>
+                    <span class="badge">CD</span>
+                  </div>
+                  <div class="info-card" data-title="República API" data-content="La API FastAPI se reconstruye y actualiza automáticamente cuando aplica, garantizando que el backend quede consistente con el código fusionado en main." >
+                    <div class="card-top"><div class="icon api-ic"></div><div><div class="card-title">República API</div><div class="card-desc">Rebuild y actualización del backend FastAPI.</div></div></div>
+                    <span class="badge">CD</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom-grid">
+          <details class="fold">
+            <summary>Las 7 validaciones del PR <span class="arrow">▾</span></summary>
+            <div class="fold-content">
+              <p>Las pruebas del workflow <b>ci-pr.yaml</b> verifican la consistencia del frontend y del contrato esperado hacia la API. De forma simple, cubren:</p>
+              <ul>
+                <li>Que el HTML cargue y contenga la estructura base esperada.</li>
+                <li>Que exista la constante <b>API_BASE</b> apuntando al backend en Azure.</li>
+                <li>Que el frontend invoque <b>/api/predecir</b> con método <b>POST</b>.</li>
+                <li>Que el frontend invoque <b>/api/entrenar</b> con método <b>POST</b>.</li>
+                <li>Que el frontend invoque <b>/api/entrenar/{run_id}</b> con método <b>GET</b>.</li>
+                <li>Que existan estructuras base de payload/ejemplo necesarias para el consumo de la API.</li>
+                <li>Que los módulos clave del frontend para predicción y entrenamiento estén presentes.</li>
+              </ul>
+              <p>El caso FAILED se demostró introduciendo deliberadamente un error en el endpoint HTML, y luego se mostró el caso SUCCESS tras corregirlo.</p>
+            </div>
+          </details>
+          <details class="fold">
+            <summary>Resumen del CI/CD montado <span class="arrow">▾</span></summary>
+            <div class="fold-content">
+              <div class="pill-row">
+                <span class="pill">Ramas feature/*</span>
+                <span class="pill">Pull Request a main</span>
+                <span class="pill">7 chequeos automáticos</span>
+                <span class="pill">Correo SUCCESS / FAILED</span>
+                <span class="pill">Merge controlado</span>
+                <span class="pill">Deploy frontend</span>
+                <span class="pill">Deploy API con Docker</span>
+                <span class="pill">OIDC con Azure</span>
+              </div>
+            </div>
+          </details>
+        </div>
+        <div class="footer">
+          <b>Diego Vega - Oscar Nivia</b>
+          <div>MLOps · Modelo Predictivo del Estado de Localización de Personas Desaparecidas en Colombia</div>
+          <div>Universidad EAN · Azure + Databricks + GitHub</div>
+          <div>2026</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <button class="close" id="closeModal">×</button>
+      <h3 id="modalTitle"></h3>
+      <div id="modalBody"></div>
+      <div class="links" id="modalLinks"></div>
+    </div>
+  </div>
+
+  <script>
+    const qs=(s,p=document)=>p.querySelector(s);
+    const qsa=(s,p=document)=>[...p.querySelectorAll(s)];
+    const body=document.body;
+    const screens=qsa('.screen');
+    const links=qsa('[data-screen-link]');
+    const crumb=qs('#crumbLabel');
+
+    function activate(hash){
+      const id=(hash||location.hash||'#general').replace('#','');
+      const screen=qs('#'+id) || qs('#general');
+      screens.forEach(s=>s.classList.toggle('active', s===screen));
+      links.forEach(a=>a.classList.toggle('active', a.getAttribute('href')==='#'+screen.id));
+      crumb.textContent=screen.dataset.title;
+      if(location.hash!==('#'+screen.id)) history.replaceState(null,'','#'+screen.id);
+    }
+    window.addEventListener('hashchange',()=>activate());
+    activate();
+
+    qs('#themeBtn').addEventListener('click',()=>{
+      body.classList.toggle('dark');
+      qs('#themeBtn').textContent = body.classList.contains('dark') ? '☀ Claro' : '🌙 Oscuro';
+    });
+    qs('#fullBtn').addEventListener('click', async()=>{
+      if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    });
+
+    const modal=qs('#modal');
+    const modalTitle=qs('#modalTitle');
+    const modalBody=qs('#modalBody');
+    const modalLinks=qs('#modalLinks');
+
+    function openModal(title, content, linksJson){
+      modalTitle.textContent=title;
+      modalBody.innerHTML = `<p>${content.replace(/\n/g,'</p><p>')}</p>`;
+      modalLinks.innerHTML='';
+      try{
+        const arr=JSON.parse(linksJson||'[]');
+        arr.forEach(x=>{
+          const a=document.createElement('a');
+          a.href=x.url; a.target=(x.url||'').startsWith('#') ? '_self' : '_blank'; a.textContent=x.label;
+          if((x.url||'').startsWith('#')) a.addEventListener('click',()=>setTimeout(()=>activate(x.url),0));
+          modalLinks.appendChild(a);
+        });
+      }catch(e){}
+      modal.classList.add('open');
+    }
+    qsa('.info-card').forEach(card=>{
+      card.addEventListener('click',()=>openModal(card.dataset.title, card.dataset.content, card.dataset.links));
+    });
+    function closeModal(){ modal.classList.remove('open'); }
+    qs('#closeModal').addEventListener('click',closeModal);
+    modal.addEventListener('click',e=>{ if(e.target===modal) closeModal(); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeModal(); });
+
+    // Inline icons
+    const iconSvg={
+      user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 19c1.6-3.1 11.4-3.1 14 0"/></svg>',
+      azure:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.9 3 6.6 15.6h4.7L13.9 3Zm1.2 0 3.4 9.1-5.1 6.9h5.8L22 11.6 15.1 3ZM6.1 16.6 2 21h10.6l-2.3-4.4H6.1Z"/></svg>',
+      api:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 8h8v8H8z"/><path d="M3 10h3M3 14h3M18 10h3M18 14h3M10 3v3M14 3v3M10 18v3M14 18v3"/></svg>',
+      db:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 3 7l9 5 9-5-9-5Zm0 9-9 5 9 5 9-5-9-5Zm0 4-9 5 9 5 9-5-9-5Z"/></svg>',
+      job:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v4H7zM5 10h14v10H5z"/><path d="M9 14h6M9 18h4"/></svg>',
+      drift:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18c4-9 8-9 16-12"/><path d="M16 6h4v4"/><path d="M4 5v13h13"/></svg>',
+      gh:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.5c.5.08.68-.2.68-.47v-1.7c-2.78.6-3.37-1.17-3.37-1.17-.45-1.13-1.1-1.43-1.1-1.43-.9-.6.07-.59.07-.59 1 .08 1.53 1 1.53 1 .88 1.52 2.32 1.08 2.88.82.09-.63.34-1.08.61-1.32-2.22-.25-4.56-1.08-4.56-4.84 0-1.07.4-1.95 1.02-2.63-.1-.25-.45-1.27.1-2.64 0 0 .84-.26 2.75 1.01a9.8 9.8 0 0 1 5 0c1.91-1.27 2.75-1 2.75-1 .55 1.37.2 2.4.1 2.64.63.68 1.02 1.56 1.02 2.63 0 3.77-2.35 4.58-4.59 4.83.35.3.67.89.67 1.8v2.66c0 .27.18.56.69.47A10 10 0 0 0 12 2Z"/></svg>',
+      mail:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>',
+      data:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>',
+      notebook:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v16H7z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
+      champ:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8v4a4 4 0 0 1-8 0V4Z"/><path d="M6 20h12M12 12v8"/><path d="M6 6H4a2 2 0 0 0 2 2"/><path d="M18 6h2a2 2 0 0 1-2 2"/></svg>',
+      delta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 8v8l8 5 8-5V8l-8-5Z"/><path d="M8 10h8M8 14h8"/></svg>',
+      mlflow:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="8" r="3" opacity=".7"/><circle cx="17" cy="16" r="3" opacity=".5"/><path d="M9.7 11.2 14 8.8M9.7 12.8 14 15.2" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>',
+      serve:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 7h8M8 12h8M8 17h4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>',
+      infer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 18 6-12 6 12"/><path d="M9.5 13h5"/></svg>',
+      acr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14v10H5z"/><path d="M8 10h8M8 14h5"/></svg>',
+      env:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h12v12H6z"/><circle cx="12" cy="12" r="3"/></svg>',
+      log:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4h9l3 3v13H6z"/><path d="M9 12h6M9 16h4"/></svg>',
+      rg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/><rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/></svg>',
+      laptop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="14" height="10" rx="1.5"/><path d="M3 18h18"/></svg>',
+      git:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M8 6h8M12 8v8"/></svg>',
+      pr:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 6h6M18 8v8M8 6v12a2 2 0 0 0 2 2h6"/></svg>',
+      merge:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M8 6c3 0 4 2 4 5v5M16 6c-3 0-4 2-4 5"/></svg>',
+      action:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3 4 14h6l-1 7 9-11h-6l1-7Z"/></svg>',
+      deploy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><rect x="4" y="16" width="16" height="4" rx="1"/></svg>',
+      docker:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15h11a4 4 0 0 0 4-4h2"/><path d="M7 11h2v2H7zM10 11h2v2h-2zM13 11h2v2h-2zM10 8h2v2h-2zM13 8h2v2h-2z"/></svg>'
+    };
+    const map={
+      'user-ic':'user','azure-ic':'azure','api-ic':'api','db-ic':'db','job-ic':'job','drift-ic':'drift','gh-ic':'gh','mail-ic':'mail','data-ic':'data','notebook-ic':'notebook','champ-ic':'champ','delta-ic':'delta','mlflow-ic':'mlflow','serve-ic':'serve','infer-ic':'infer','acr-ic':'acr','env-ic':'env','log-ic':'log','rg-ic':'rg','laptop-ic':'laptop','git-ic':'git','pr-ic':'pr','merge-ic':'merge','action-ic':'action','deploy-ic':'deploy','docker-ic':'docker'
+    };
+    for(const [cls,key] of Object.entries(map)) qsa('.'+cls).forEach(el=>el.innerHTML=iconSvg[key]);
+  </script>
+</body>
+</html>

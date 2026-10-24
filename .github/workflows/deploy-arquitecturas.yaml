@@ -1,0 +1,75 @@
+name: Desplegar Presentacion de Arquitectura MLOps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'azure/frontend/arquitecturas/**'
+      - '.github/workflows/deploy-arquitecturas.yaml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: mlops-arquitecturas-deploy
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-mlops-ean
+  STORAGE_ACCOUNT: stdesap1792649942
+  HTML_FILE: azure/frontend/arquitecturas/Presentacion_Arquitectura_MLOps_Desaparecidos.html
+  BLOB_NAME: arquitecturas/Presentacion_Arquitectura_MLOps_Desaparecidos.html
+  PUBLIC_URL: https://stdesap1792649942.z22.web.core.windows.net/arquitecturas/Presentacion_Arquitectura_MLOps_Desaparecidos.html
+
+jobs:
+  publicar-presentacion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener codigo
+        uses: actions/checkout@v4
+
+      - name: Autenticar en Azure mediante OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publicar exclusivamente la presentacion HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f "$HTML_FILE"
+
+          # Reutiliza los permisos Azure que ya permiten desplegar el frontend.
+          # La clave queda en la memoria del runner y no se imprime en los logs.
+          STORAGE_KEY=$(az storage account keys list \
+            --resource-group "$RESOURCE_GROUP" \
+            --account-name "$STORAGE_ACCOUNT" \
+            --query '[0].value' --output tsv)
+
+          az storage blob upload \
+            --account-name "$STORAGE_ACCOUNT" \
+            --account-key "$STORAGE_KEY" \
+            --container-name '$web' \
+            --name "$BLOB_NAME" \
+            --file "$HTML_FILE" \
+            --content-type 'text/html; charset=utf-8' \
+            --overwrite true \
+            --only-show-errors \
+            --output none
+
+          unset STORAGE_KEY
+          echo "Presentacion publicada: $PUBLIC_URL"
+
+      - name: Verificar la publicacion en Azure
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --retry 6 --retry-delay 5 --retry-all-errors \
+            --max-time 30 --silent --show-error \
+            --output /tmp/presentacion_mloops_publicada.html "$PUBLIC_URL"
+          grep -Fq 'Arquitectura General' /tmp/presentacion_mloops_publicada.html
+          echo "OK: HTML publicado y accesible en $PUBLIC_URL"

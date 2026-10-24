@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'azure/frontend/**'
+      - '!azure/frontend/arquitecturas/**'
       - 'tests/**'
       - '.github/workflows/ci-pr.yaml'
   workflow_dispatch:

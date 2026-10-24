@@ -1,4 +1,3 @@
-
 name: Desplegar Frontend MLOps en Azure
 
 on:
@@ -6,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'azure/frontend/**'
+      - '!azure/frontend/arquitecturas/**'
       - '.github/workflows/deploy-frontend.yaml'
   workflow_dispatch:
 
