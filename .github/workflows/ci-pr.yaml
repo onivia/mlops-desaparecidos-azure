@@ -26,4 +26,70 @@ jobs:
           node-version: '22'
 
       - name: Validar HTML, JavaScript y contratos de las APIs
-        run: node --test tests/frontend.test.mjs
+        id: pruebas
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          node --test --test-reporter=tap tests/frontend.test.mjs 2>&1 | tee resultados-ci.log
+
+      - name: Preparar resumen de las pruebas
+        if: always()
+        env:
+          RESULTADO: ${{ steps.pruebas.outcome }}
+          PR_NUMERO: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$RESULTADO" = "success" ]; then
+            ESTADO="SUCCESS"
+          else
+            ESTADO="FAILED"
+          fi
+
+          {
+            echo "MLOps Desaparecidos - Universidad EAN"
+            echo "Estado CI: $ESTADO"
+            echo "Repositorio: $GITHUB_REPOSITORY"
+            echo "Rama: ${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            echo "Pull Request: ${PR_NUMERO:-Ejecucion manual}"
+            echo
+            echo "Resumen de pruebas:"
+            if [ -f resultados-ci.log ]; then
+              grep -E '^# (tests|pass|fail) ' resultados-ci.log || true
+            else
+              echo "No se genero el registro de pruebas."
+            fi
+
+            if [ "$ESTADO" = "FAILED" ]; then
+              echo
+              echo "Pruebas que fallaron y detalle del error:"
+              if [ -f resultados-ci.log ]; then
+                sed -n '/^not ok [0-9]/,+18p' resultados-ci.log | head -n 120 || true
+              fi
+              echo "Consulta la ejecucion completa en GitHub Actions."
+            else
+              echo
+              echo "Todas las pruebas automaticas finalizaron correctamente."
+              echo "El Pull Request puede pasar a revision y merge."
+            fi
+            echo
+            echo "Detalles: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > correo-ci.txt
+
+      - name: Enviar resultado CI por correo
+        if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: dawidd6/action-send-mail@v18
+        continue-on-error: true
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ohnivia@gmail.com
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          to: ohnivia@gmail.com
+          cc: dvegaar88683@universidadean.edu.co
+          from: 'MLOps GitHub Actions <ohnivia@gmail.com>'
+          subject: "MLOps CI - ${{ steps.pruebas.outcome == 'success' && 'SUCCESS (7/7)' || 'FAILED' }} - PR #${{ github.event.pull_request.number || 'Manual' }}"
+          body: file://correo-ci.txt
+
+      - name: Conservar estado FAILED si una prueba falla
+        if: ${{ always() && steps.pruebas.outcome != 'success' }}
+        run: exit 1
